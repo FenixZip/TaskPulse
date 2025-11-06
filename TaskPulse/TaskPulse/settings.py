@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / "../.env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -40,6 +40,30 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # TaskPUle
+    'rest_framework',
+    'rest_framework.authtoken',
+    'accounts',
+]
+
+AUTH_USER_MODEL = "accounts.User"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
+# На время разработки письма будем выводить в консоль
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "supprot@task-pulse.ru"
+FRONTEND_BASE_URL = "http://localhost:3000"
+
+AUTHENTICATION_BACKENDS = [
+    "accounts.auth_backend.EmailBackend",
 ]
 
 MIDDLEWARE = [
@@ -89,7 +113,6 @@ DATABASES = {
 assert os.getenv("DB_NAME"), "DB_NAME не найден в окружении"
 assert os.getenv("DB_USER"), "DB_USER не найден"
 assert os.getenv("DB_PASSWORD"), "DB_PASSWORD не найден"
-
 
 
 # Password validation
