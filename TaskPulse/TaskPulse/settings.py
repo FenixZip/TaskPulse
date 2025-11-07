@@ -26,7 +26,7 @@ load_dotenv(BASE_DIR / "../.env")
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
+DEBUG = os.getenv("DEBUG")
 
 ALLOWED_HOSTS = []
 
@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     # TaskPUle
     'rest_framework',
     'rest_framework.authtoken',
-    'accounts',
+    'accounts.apps.AccountsConfig',
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -59,7 +59,9 @@ REST_FRAMEWORK = {
 
 # На время разработки письма будем выводить в консоль
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "supprot@task-pulse.ru"
+EMAIL_MESSAGE_ID_FQDN = "task-pulse.local"  # можно "localhost" или ваш реальный домен
+DEFAULT_FROM_EMAIL = "no-reply@task-pulse.local"
+SERVER_EMAIL = "server@task-pulse.local"
 FRONTEND_BASE_URL = "http://localhost:3000"
 
 AUTHENTICATION_BACKENDS = [
@@ -155,3 +157,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+

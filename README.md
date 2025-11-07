@@ -5,6 +5,8 @@ export PATH="/usr/bin:$PATH"
 
 
 C:\Program Files\PostgreSQL\16\bin
+Покрытие
+pytest --cov=. --cov-report=term-missing
 
 апусти psql:
 psql -U postgres

@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
-
+from .managers import UserManager
 
 class User(AbstractUser):
     """Кастомная модель пользователя"""
@@ -23,6 +23,7 @@ class User(AbstractUser):
     role = models.CharField(max_length=24, choices=Role.choices, default=Role.CREATOR)
     email_verified = models.BooleanField(default=False)
 
+    objects = UserManager()          # <- ВАЖНО
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["full_name", "company"]
 
