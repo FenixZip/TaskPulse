@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / "../.env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -26,7 +26,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
+DEBUG = os.getenv("DEBUG")
 
 ALLOWED_HOSTS = []
 
@@ -40,6 +40,32 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # TaskPUle
+    'rest_framework',
+    'rest_framework.authtoken',
+    'accounts.apps.AccountsConfig',
+]
+
+AUTH_USER_MODEL = "accounts.User"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
+# На время разработки письма будем выводить в консоль
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_MESSAGE_ID_FQDN = "task-pulse.local"  # можно "localhost" или ваш реальный домен
+DEFAULT_FROM_EMAIL = "no-reply@task-pulse.local"
+SERVER_EMAIL = "server@task-pulse.local"
+FRONTEND_BASE_URL = "http://localhost:3000"
+
+AUTHENTICATION_BACKENDS = [
+    "accounts.auth_backend.EmailBackend",
 ]
 
 MIDDLEWARE = [
@@ -91,7 +117,6 @@ assert os.getenv("DB_USER"), "DB_USER не найден"
 assert os.getenv("DB_PASSWORD"), "DB_PASSWORD не найден"
 
 
-
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -132,3 +157,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
