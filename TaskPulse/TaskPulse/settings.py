@@ -17,6 +17,9 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+
 load_dotenv(BASE_DIR / "../.env")
 
 # Quick-start development settings - unsuitable for production
@@ -43,7 +46,9 @@ INSTALLED_APPS = [
     # TaskPUle
     'rest_framework',
     'rest_framework.authtoken',
+    'django_filters',
     'accounts.apps.AccountsConfig',
+    'tasks',
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -54,6 +59,9 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
     ],
 }
 
