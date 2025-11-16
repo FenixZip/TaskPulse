@@ -2,6 +2,7 @@
 __pycache__/
 *.py[codz]
 *$py.class
+Code_review.md
 
 # C extensions
 *.so
