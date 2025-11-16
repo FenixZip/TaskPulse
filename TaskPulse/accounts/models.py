@@ -18,18 +18,29 @@ class User(AbstractUser):
     username = None
     full_name = models.CharField(max_length=255, blank=True, default="")
     company     = models.CharField(max_length=255, blank=True, default="")
+    position = models.CharField(
+        max_length=255,
+        blank=False,
+        null=True,
+        verbose_name="Должность",
+    )
+    role = models.CharField(
+        max_length=24,
+        choices=Role.choices,
+        default=Role.CREATOR,
+    )
     email = models.EmailField(unique=True)
     telegram_id = models.BigIntegerField(unique=True, db_index=True, null=True, blank=True)
-    role = models.CharField(max_length=24, choices=Role.choices, default=Role.CREATOR)
     email_verified = models.BooleanField(default=False)
 
-    objects = UserManager()          # <- ВАЖНО
+    objects = UserManager()
+
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["full_name", "company"]
+    REQUIRED_FIELDS = ["full_name", "company", "position"]
 
     def __str__(self):
         """Возвращает строковое представление пользователя для админки/отладчика."""
-        return f"{self.email} -> {self.full_name} -> {self.company} -> {self.role}"
+        return f"{self.email} -> {self.full_name} -> {self.company} -> {self.position} -> {self.role}"
 
 
 class EmailVerificationToken(models.Model):

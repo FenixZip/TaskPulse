@@ -10,7 +10,7 @@ from accounts.models import EmailVerificationToken, Invitation # noqa: F401
 @pytest.mark.django_db
 def test_user_str_representation(creator):
     """Проверяем человекочитаемое представление пользователя"""
-    expected = f"{creator.email} -> {creator.full_name} -> {creator.company} -> {creator.role}"
+    expected = f"{creator.email} -> {creator.full_name} -> {creator.company} -> {creator.position} -> {creator.role}"
     assert str(creator) == expected
 
 @pytest.mark.django_db
