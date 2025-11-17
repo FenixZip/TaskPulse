@@ -1,6 +1,7 @@
 """serializers.py"""
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.db import transaction
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 
@@ -26,9 +27,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Создаёт пользователя через менеджер create_user."""
-
         password = validated_data.pop("password")
-        # стандартный менеджер user.set_password сам вызовется внутри create_user
         user = User.objects.create_user(password=password, **validated_data)
         return user
 
@@ -45,17 +44,15 @@ class LoginSerializer(serializers.Serializer):
     }
 
     def validate(self, attrs):
-        """Валидирует связку email+password."""
-
+        """Валидирует связку email+password через authenticate()."""
         email = attrs.get("email")
         password = attrs.get("password")
+        request = self.context.get("request")
 
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            raise serializers.ValidationError(self.error_messages["invalid_credentials"])
+        # Используем AUTHENTICATION_BACKENDS; наш EmailBackend принимает email=...
+        user = authenticate(request=request, email=email, password=password)
 
-        if not user.check_password(password):
+        if not user:
             raise serializers.ValidationError(self.error_messages["invalid_credentials"])
 
         if not getattr(user, "email_verified", False):
@@ -75,7 +72,6 @@ class InvitationCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Создаёт Invitation от имени текущего аутентифицированного пользователя."""
-
         request = self.context["request"]
         invitation = Invitation.objects.create(
             invited_by=request.user,
@@ -98,54 +94,62 @@ class AcceptInviteSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         """Находит инвайт по токену, создаёт/обновляет пользователя EXECUTOR."""
-
         try:
-            inv = Invitation.objects.get(
-                token=validated_data["token"],
-                accepted_at__isnull=True,
+            inv = (
+                Invitation.objects.select_related("invited_by")
+                .get(
+                    token=validated_data["token"],
+                    accepted_at__isnull=True,
+                )
             )
         except Invitation.DoesNotExist:
             raise serializers.ValidationError("Инвайт недействителен")
 
-        # компания берётся у создателя
         creator_company = inv.invited_by.company
 
-        user, created = User.objects.get_or_create(
-            email=inv.email,
-            defaults={
-                "role": User.Role.EXECUTOR,
-                "company": creator_company,
-                "position": validated_data["position"],
-                "full_name": validated_data.get("full_name", ""),
-            },
-        )
+        with transaction.atomic():
+            user, created = User.objects.get_or_create(
+                email=inv.email,
+                defaults={
+                    "role": User.Role.EXECUTOR,
+                    "company": creator_company,
+                    "position": validated_data["position"],
+                    "full_name": validated_data.get("full_name", ""),
+                    # раз инвайт дошёл до почты – считаем email подтверждённым
+                    "email_verified": True,
+                },
+            )
 
-        if created:
-            # новый пользователь – задаём пароль и сохраняем
-            user.set_password(validated_data["password"])
-            user.save()
-        else:
-            # существующий пользователь – гарантируем роль и компанию/должность
-            updated_fields = []
+            if created:
+                # новый пользователь – задаём пароль и сохраняем
+                user.set_password(validated_data["password"])
+                user.save()
+            else:
+                # существующий пользователь – гарантируем роль и компанию/должность
+                updated_fields = []
 
-            if user.role != User.Role.EXECUTOR:
-                user.role = User.Role.EXECUTOR
-                updated_fields.append("role")
+                if user.role != User.Role.EXECUTOR:
+                    user.role = User.Role.EXECUTOR
+                    updated_fields.append("role")
 
-            if not user.company and creator_company:
-                user.company = creator_company
-                updated_fields.append("company")
+                if not user.company and creator_company:
+                    user.company = creator_company
+                    updated_fields.append("company")
 
-            if not user.position and validated_data.get("position"):
-                user.position = validated_data["position"]
-                updated_fields.append("position")
+                if not user.position and validated_data.get("position"):
+                    user.position = validated_data["position"]
+                    updated_fields.append("position")
 
-            if updated_fields:
-                user.save(update_fields=updated_fields)
+                if not user.email_verified:
+                    user.email_verified = True
+                    updated_fields.append("email_verified")
 
-        inv.mark_accepted()
+                if updated_fields:
+                    user.save(update_fields=updated_fields)
+
+            inv.mark_accepted()
+
         token, _ = Token.objects.get_or_create(user=user)
-
         return {"token": token.key, "email": user.email}
 
 
@@ -156,7 +160,6 @@ class VerifyEmailSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         """Выполняет подтверждение email по токену."""
-
         token = validated_data["token"]
 
         try:

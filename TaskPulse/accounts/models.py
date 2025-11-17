@@ -20,7 +20,7 @@ class User(AbstractUser):
     company     = models.CharField(max_length=255, blank=True, default="")
     position = models.CharField(
         max_length=255,
-        blank=False,
+        blank=True,
         null=True,
         verbose_name="Должность",
     )
@@ -45,29 +45,39 @@ class User(AbstractUser):
 
 class EmailVerificationToken(models.Model):
     """Токен подтверждения email: позволяет подтвердить адрес пользователя по ссылке."""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="email_tokens")
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="email_tokens",
+    )
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     used_at = models.DateTimeField(null=True, blank=True)
-    expires_at = models.DateTimeField()
+    # отдельный индекс по дате истечения
+    expires_at = models.DateTimeField(db_index=True)
 
     @classmethod
     def issue_for(cls, user, ttl_hours: int = 48):
-        """Создаёт и возвращает новый токен подтверждения"""
+        """Создаёт и возвращает новый токен подтверждения."""
         return cls.objects.create(
             user=user,
             expires_at=timezone.now() + timedelta(hours=ttl_hours),
         )
 
     def mark_used(self):
-        """Помечает токен как использованный"""
+        """Помечает токен как использованный."""
         self.used_at = timezone.now()
         self.save(update_fields=["used_at"])
 
     def is_valid(self):
-        """Проверяет валидность токена"""
+        """Проверяет валидность токена."""
         return self.used_at is None and timezone.now() <= self.expires_at
 
+    class Meta:
+        indexes = [
+            # быстрый поиск токенов по пользователю и сроку действия
+            models.Index(fields=["user", "expires_at"]),
+        ]
 
 class Invitation(models.Model):
     """Приглашение исполнителя"""
@@ -79,7 +89,12 @@ class Invitation(models.Model):
 
     class Meta:
         """Связка кого пригласили и кто пригласил"""
-        unique_together = ("email", "invited_by")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("email", "invited_by"),
+                name="unique_invitation_per_creator",
+            )
+        ]
 
     def mark_accepted(self):
         """Помечает инвайт принятым, проставляя accepted_at."""

@@ -1,7 +1,9 @@
 """permissions.py"""
 from rest_framework.permissions import BasePermission
-from .models import User
+from django.contrib.auth import get_user_model
 
+
+User = get_user_model()
 
 class IsCreator(BasePermission):
     """
@@ -9,4 +11,5 @@ class IsCreator(BasePermission):
 
     def has_permission(self, request, view):
         """Возвращает True, если пользователь аутентифицирован и имеет роль CREATOR."""
-        return bool(request.user and request.user.is_authenticated and request.user.role == User.Role.CREATOR)
+        user = request.user
+        return bool(user and user.is_authenticated and user.role == User.Role.CREATOR)

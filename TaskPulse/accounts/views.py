@@ -6,9 +6,13 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from .permissions import IsCreator
-from .serializers import (AcceptInviteSerializer, InvitationCreateSerializer,
-                    LoginSerializer, RegisterSerializer,
-                          VerifyEmailSerializer)
+from .serializers import (
+    AcceptInviteSerializer,
+    InvitationCreateSerializer,
+    LoginSerializer,
+    RegisterSerializer,
+    VerifyEmailSerializer,
+)
 
 User = get_user_model()
 
@@ -19,6 +23,7 @@ class RegisterView(generics.CreateAPIView):
     Регистрирует пользователя (обычно CREATOR).
     Сигнал post_save отправит письмо для подтверждения email.
     """
+
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
 
@@ -28,6 +33,7 @@ class LoginView(generics.GenericAPIView):
     POST /api/auth/login
     Принимает email/пароль, возвращает токен.
     """
+
     serializer_class = LoginSerializer
     permission_classes = [permissions.AllowAny]
 
@@ -51,12 +57,14 @@ class LoginView(generics.GenericAPIView):
             }
         )
 
+
 class InvitationCreateView(generics.CreateAPIView):
     """
     POST /api/auth/invitations
     Создаёт инвайт для email. Письмо уйдёт сигналом.
     Доступно только CREATOR.
     """
+
     serializer_class = InvitationCreateSerializer
     permission_classes = [permissions.IsAuthenticated, IsCreator]
 
@@ -67,6 +75,7 @@ class AcceptInviteView(generics.CreateAPIView):
     Принимает token инвайта, пароль и, опционально, имя.
     Создаёт/обновляет пользователя EXECUTOR и возвращает токен.
     """
+
     serializer_class = AcceptInviteSerializer
     permission_classes = [permissions.AllowAny]
 

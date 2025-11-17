@@ -17,6 +17,8 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 
@@ -25,13 +27,16 @@ load_dotenv(BASE_DIR / "../.env")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 # print(DEBUG)
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY and not DEBUG:
+    raise RuntimeError("SECRET_KEY не установлен")
 
 
 # Application definition
@@ -72,11 +77,7 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 EMAIL_MESSAGE_ID_FQDN = "task-pulse.local"  # можно "localhost" или ваш реальный домен
 DEFAULT_FROM_EMAIL = "no-reply@task-pulse.local"
 SERVER_EMAIL = "server@task-pulse.local"
-FRONTEND_BASE_URL = "http://localhost:3000"
 
-AUTHENTICATION_BACKENDS = [
-    "accounts.auth_backend.EmailBackend",
-]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -89,18 +90,27 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    # React dev server http
-    "http://localhost:3000",
-    # если используете 127.0.0.1
-    "http://127.0.0.1:3000",
-]
 
-CSRF_TRUSTED_ORIGINS = [
-    # доверяем фронту на 3000 порту
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+# базовый URL фронтенда (по умолчанию dev)
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000")
+
+def _split_env_list(name, default=""):
+    """Разбить переменную окружения на список, отбросив пустые значения."""
+    value = os.getenv(name, default)
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+# CORS
+CORS_ALLOWED_ORIGINS = _split_env_list(
+    "CORS_ALLOWED_ORIGINS",
+    default=FRONTEND_BASE_URL,
+)
+
+# CSRF
+CSRF_TRUSTED_ORIGINS = _split_env_list(
+    "CSRF_TRUSTED_ORIGINS",
+    default=FRONTEND_BASE_URL,
+)
+
 
 ROOT_URLCONF = 'TaskPulse.urls'
 

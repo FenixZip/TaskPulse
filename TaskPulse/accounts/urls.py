@@ -12,7 +12,7 @@ urlpatterns = [
     path("invitations/", InvitationCreateView.as_view(), name="invitation-create"),
 
     # Принятие инвайта (по токену)
-    path("accept-invite", AcceptInviteView.as_view()),
+    path("accept-invite/", AcceptInviteView.as_view(), name="accept-invite"),
     # Подтверждение email по токену
-    path("verify-email", verify_email),
+    path("verify-email/", verify_email, name="verify_email"),
 ]
