@@ -1,4 +1,4 @@
-"""serializers.py"""
+"""accounts/serializers.py"""
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
@@ -27,6 +27,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Создаёт пользователя через менеджер create_user."""
+
         password = validated_data.pop("password")
         user = User.objects.create_user(password=password, **validated_data)
         return user
@@ -45,18 +46,17 @@ class LoginSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         """Валидирует связку email+password через authenticate()."""
+
         email = attrs.get("email")
         password = attrs.get("password")
         request = self.context.get("request")
 
-        # Используем AUTHENTICATION_BACKENDS; наш EmailBackend принимает email=...
         user = authenticate(request=request, email=email, password=password)
 
         if not user:
             raise serializers.ValidationError(self.error_messages["invalid_credentials"])
 
         if not getattr(user, "email_verified", False):
-            # если email_verified нет в модели — getattr вернёт False
             raise serializers.ValidationError(self.error_messages["email_not_verified"])
 
         attrs["user"] = user
@@ -72,6 +72,7 @@ class InvitationCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Создаёт Invitation от имени текущего аутентифицированного пользователя."""
+
         request = self.context["request"]
         invitation = Invitation.objects.create(
             invited_by=request.user,
@@ -94,6 +95,7 @@ class AcceptInviteSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         """Находит инвайт по токену, создаёт/обновляет пользователя EXECUTOR."""
+
         try:
             inv = (
                 Invitation.objects.select_related("invited_by")
@@ -160,6 +162,7 @@ class VerifyEmailSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         """Выполняет подтверждение email по токену."""
+
         token = validated_data["token"]
 
         try:

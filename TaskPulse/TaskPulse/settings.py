@@ -17,7 +17,6 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
@@ -74,7 +73,6 @@ REST_FRAMEWORK = {
 
 # На время разработки письма будем выводить в консоль
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-EMAIL_MESSAGE_ID_FQDN = "task-pulse.local"  # можно "localhost" или ваш реальный домен
 DEFAULT_FROM_EMAIL = "no-reply@task-pulse.local"
 SERVER_EMAIL = "server@task-pulse.local"
 

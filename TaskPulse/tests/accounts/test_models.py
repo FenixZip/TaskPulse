@@ -1,21 +1,23 @@
+"""tests/accounts/test_models.py"""
 from datetime import timedelta
 
 import pytest
+from accounts.models import EmailVerificationToken, Invitation  # noqa: F401
 from django.db import IntegrityError
 from django.utils import timezone
-
-from accounts.models import EmailVerificationToken, Invitation # noqa: F401
 
 
 @pytest.mark.django_db
 def test_user_str_representation(creator):
     """Проверяем человекочитаемое представление пользователя"""
+
     expected = f"{creator.email} -> {creator.full_name} -> {creator.company} -> {creator.position} -> {creator.role}"
     assert str(creator) == expected
 
 @pytest.mark.django_db
 def test_user_email_uniqueness(user_factory):
     """Проверяем уникальность email"""
+
     first = user_factory(email='unique@example.com')
     with pytest.raises(IntegrityError):
         user_factory(email=first.email)
@@ -23,6 +25,7 @@ def test_user_email_uniqueness(user_factory):
 @pytest.mark.django_db
 def test_user_telegram_id_uniqueness_allows_null(user_factory):
     """Проверяем, что telegram_id уникален"""
+
     u1 = user_factory(telegram_id=None)
     u2 = user_factory(telegram_id=None)
     assert u1.telegram_id is None and u2.telegram_id is None
@@ -38,6 +41,7 @@ def test_user_telegram_id_uniqueness_allows_null(user_factory):
 @pytest.mark.django_db
 def test_user_defaults(user_factory):
     """Проверяем значения по умолчанию"""
+
     user = user_factory()
     assert user.role == "CREATOR"
     assert user.email_verified is False
@@ -51,6 +55,7 @@ def test_user_defaults(user_factory):
 @pytest.mark.django_db
 def test_evt_issue_for_creates_valid_token(creator):
     """Проверяем EmailVerificationToken"""
+
     start = timezone.now()
     evt = EmailVerificationToken.issue_for(creator)
     assert evt.pk is not None
@@ -64,6 +69,7 @@ def test_evt_issue_for_creates_valid_token(creator):
 @pytest.mark.django_db
 def test_evt_is_valid_true_until_used_or_expired(creator):
     """Проверяем логику is_valid()"""
+
     evt = EmailVerificationToken.issue_for(creator, ttl_hours=1)
 
     # На старте токен не использован и не просрочен — is_valid() должно быть True
@@ -86,6 +92,7 @@ def test_evt_is_valid_true_until_used_or_expired(creator):
 @pytest.mark.django_db
 def test_evt_mark_used_idempotent_like(creator):
     """Проверяем, что повторные вызовы mark_used() не приводят к ошибкам"""
+
     evt = EmailVerificationToken.issue_for(creator)
     evt.mark_used()
     first_used_at = evt.used_at
@@ -101,6 +108,7 @@ def test_evt_mark_used_idempotent_like(creator):
 @pytest.mark.django_db
 def test_invitation_unique_together_email_invited_by(creator):
     """Проверяем ограничение"""
+
     inv1 = Invitation.objects.create(email="worker@example.com", invited_by=creator)
     assert inv1.pk is not None
     # Повторная попытка для того же (email, invited_by) должна упасть по уникальности
@@ -110,6 +118,7 @@ def test_invitation_unique_together_email_invited_by(creator):
 @pytest.mark.django_db
 def test_invitation_allows_same_email_from_different_inviter(creator, user_factory):
     """Проверяем, что одинаковый email можно пригласить разными приглашающими"""
+
     other_inviter = user_factory(role="CREATOR")
 
     # Создаём два инвайта на один email, но от разных приглашающих
@@ -123,14 +132,12 @@ def test_invitation_allows_same_email_from_different_inviter(creator, user_facto
 @pytest.mark.django_db
 def test_invitation_mark_accepted_sets_timestamp(creator):
     """Проверяем, что mark_accepted() устанавливает accepted_at и сохраняет в БД"""
-    inv = Invitation.objects.create(email="worker2@example.com", invited_by=creator)
 
+    inv = Invitation.objects.create(email="worker2@example.com", invited_by=creator)
     # До вызова отметки принятия поле пустое
     assert inv.accepted_at is None
-
     # Вызываем метод доменной модели
     inv.mark_accepted()
-
     # Перечитываем объект из БД, чтобы убедиться в персистентности изменений
     refreshed = Invitation.objects.get(pk=inv.pk)
     assert refreshed.accepted_at is not None
@@ -138,6 +145,7 @@ def test_invitation_mark_accepted_sets_timestamp(creator):
 @pytest.mark.django_db
 def test_invitation_token_is_uuid_and_unique(creator):
     """Базовая проверка того, что поле token — UUID и оно уникально"""
+
     inv1 = Invitation.objects.create(email="uniq1@example.com", invited_by=creator)
     inv2 = Invitation.objects.create(email="uniq2@example.com", invited_by=creator)
 

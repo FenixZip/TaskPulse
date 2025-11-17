@@ -1,21 +1,20 @@
+"""tests/tasks/test_tasks_api.py"""
 import datetime
-from datetime import timedelta
 
 import pytest
 from django.utils import timezone
-
-from tasks.models import Task, TaskChangeLog
+from tasks.models import Task
 
 
 @pytest.mark.django_db
 def test_create_task_sets_creator(auth_client, executor):
     """
     Цель: POST /api/tasks/ должен создать задачу с creator=request.user.
-
     Проверяем:
     - код 201
     - creator в ответе — id авторизованного пользователя
     """
+
     payload = {
         "title": "Новая задача",
         "description": "Описание",
@@ -74,10 +73,10 @@ def test_list_tasks_filter_search_ordering(auth_client, auth_client_executor, ta
 def test_patch_task_by_creator_allowed(auth_client, task_factory):
     """
     Цель: создатель задачи может менять её (PATCH /api/tasks/{id}/).
-
     Ожидаем:
     - 200 и обновлённое значение поля.
     """
+
     task = task_factory()
     r = auth_client.patch(f"/api/tasks/{task.id}/", {"status": Task.Status.IN_PROGRESS}, format="json")
     assert r.status_code == 200
@@ -117,6 +116,7 @@ def test_action_confirm_on_time_writes_log(auth_client_executor, task_factory, e
     Цель: POST /api/tasks/{id}/confirm-on-time доступен исполнителю
     и пишет запись в журнал (field='confirm_on_time').
     """
+
     task = task_factory(assignee=executor)
     r = auth_client_executor.post(f"/api/tasks/{task.id}/confirm-on-time/", {}, format="json")
     assert r.status_code == 200
@@ -129,8 +129,8 @@ def test_action_extend_1d_requires_comment_and_moves_due(auth_client_executor, t
     Цель: POST /api/tasks/{id}/extend-1d/ требует 'comment'
     и сдвигает due_at ровно на сутки вперёд.
     """
+
     task = task_factory(assignee=executor)
-    old_due = task.due_at
 
     # без коммента — 400 (ВАЖНО: завершающий /)
     r_bad = auth_client_executor.post(f"/api/tasks/{task.id}/extend-1d/", {}, format="json")

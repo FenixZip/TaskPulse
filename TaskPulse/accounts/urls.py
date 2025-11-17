@@ -1,5 +1,8 @@
+"""accounts/urls.py"""
 from django.urls import path
-from .views import RegisterView, LoginView, InvitationCreateView, AcceptInviteView, verify_email
+
+from .views import (AcceptInviteView, InvitationCreateView, LoginView,
+                    RegisterView, verify_email)
 
 urlpatterns = [
     # POST /api/auth/register → регистрация
@@ -12,7 +15,7 @@ urlpatterns = [
     path("invitations/", InvitationCreateView.as_view(), name="invitation-create"),
 
     # Принятие инвайта (по токену)
-    path("accept-invite/", AcceptInviteView.as_view(), name="accept-invite"),
+    path("accept-invite/", AcceptInviteView.as_view(), name="reports-monthly"),
     # Подтверждение email по токену
-    path("verify-email/", verify_email, name="verify_email"),
+    path("verify-email/", verify_email, name="reports-monthly"),
 ]

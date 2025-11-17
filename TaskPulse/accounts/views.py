@@ -1,4 +1,4 @@
-"""views.py"""
+"""accounts/views.py"""
 from django.contrib.auth import get_user_model
 from rest_framework import generics, permissions
 from rest_framework.authtoken.models import Token
@@ -6,16 +6,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from .permissions import IsCreator
-from .serializers import (
-    AcceptInviteSerializer,
-    InvitationCreateSerializer,
-    LoginSerializer,
-    RegisterSerializer,
-    VerifyEmailSerializer,
-)
+from .serializers import (AcceptInviteSerializer, InvitationCreateSerializer,
+                          LoginSerializer, RegisterSerializer,
+                          VerifyEmailSerializer)
 
 User = get_user_model()
-
 
 class RegisterView(generics.CreateAPIView):
     """
@@ -88,6 +83,7 @@ def verify_email(request):
     Подтверждает email, если токен валиден.
     Возвращает {"email_verified": true}.
     """
+
     # Собираем сериализатор из query-параметра token
     ser = VerifyEmailSerializer(data={"token": request.query_params.get("token")})
     # Валидируем входные данные

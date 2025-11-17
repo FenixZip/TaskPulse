@@ -1,9 +1,9 @@
-import pytest
+"""tests/accounts/test_reports_api.py"""
 from datetime import timedelta
 
+import pytest
 from django.utils import timezone
 from rest_framework.reverse import reverse
-
 from tasks.models import Task
 
 
@@ -11,17 +11,15 @@ from tasks.models import Task
 def test_monthly_report_requires_auth(api_client):
     """
     Цель: убедиться, что GET /api/reports/monthly/ недоступен анонимному пользователю.
-
     Шаги:
     1) Анонимно дергаем endpoint отчёта.
     2) Ожидаем статус 401 или 403.
     """
+
     # получаем URL по имени маршрута (не хардкодим /api/...)
     url = reverse("reports-monthly")
-
     # анонимный запрос без токена
     resp = api_client.get(url)
-
     # доступ должен быть запрещён
     assert resp.status_code in (401, 403)
 
@@ -34,7 +32,6 @@ def test_monthly_report_user_me_filters_by_assignee_and_month(
     Цель: убедиться, что отчёт считает задачи:
     - только по указанному исполнителю (user=me),
     - только по задачам с due_at внутри указанного месяца.
-
     Шаги:
     1) Берём базовую дату (now) и строим строку month=YYYY-MM.
     2) Создаём:
@@ -44,11 +41,11 @@ def test_monthly_report_user_me_filters_by_assignee_and_month(
     3) Делаем GET /reports/monthly/?user=me&month=YYYY-MM под исполнителем.
     4) Ожидаем total = 1 и корректные счётчики by_status.
     """
+
     # текущее время
     now = timezone.now()
     # форматируем месяц в виде YYYY-MM (для параметра month)
     month_str = now.strftime("%Y-%m")
-
     # дата дедлайна внутри целевого месяца
     due_in_month = now + timedelta(days=1)
 
@@ -107,7 +104,6 @@ def test_monthly_report_user_me_filters_by_assignee_and_month(
 def test_monthly_report_csv_format_returns_csv(auth_client_executor, task_factory, executor):
     """
     Цель: при ?format=csv отчёт должен вернуться в формате CSV с корректными цифрами.
-
     Оракул/стратегия:
     - Если CSV-экспорт ещё не реализован и возвращается 404 Not Found,
       мы принимаем это как допустимое текущее поведение и проверяем,
@@ -118,6 +114,7 @@ def test_monthly_report_csv_format_returns_csv(auth_client_executor, task_factor
     - не падает сейчас (когда CSV ещё нет),
     - но начнёт проверять CSV-контент, как только он появится.
     """
+
     now = timezone.now()
     month_str = now.strftime("%Y-%m")
 

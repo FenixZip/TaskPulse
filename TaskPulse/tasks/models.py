@@ -1,16 +1,16 @@
-"""models.py"""
+"""tasks/models.py"""
 import uuid
 from typing import Optional
-from django.db import models
-from django.contrib.auth import get_user_model
-from django.utils import timezone
 
+from django.contrib.auth import get_user_model
+from django.db import models
+from django.utils import timezone
 
 User = get_user_model()
 
 
 def task_attachment_upload_to(instance: "TaskAttachment", filename: str) -> str:
-    """Возвращает путь, по которому будет сохранён файл вложения"""
+    """Возвращает путь, по которому будет сохранён файл вложения."""
 
     unique = uuid.uuid4()
     folder = f"{instance.task_id or 'pending'}"
@@ -18,14 +18,18 @@ def task_attachment_upload_to(instance: "TaskAttachment", filename: str) -> str:
 
 
 class Task(models.Model):
-    """Задача"""
+    """Модель задачи."""
 
     class Priority(models.TextChoices):
+        """Уровень приоритета задачи."""
+
         LOW = "low", "Low"
         MEDIUM = "medium", "Medium"
         HIGH = "high", "High"
 
     class Status(models.TextChoices):
+        """Статус выполнения задачи."""
+
         NEW = "new", "New"
         IN_PROGRESS = "in_progress", "In progress"
         DONE = "done", "Done"
@@ -60,12 +64,12 @@ class Task(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
-        """Строковое представление задачи"""
+        """Возвращает человеко-читаемое строковое представление задачи."""
 
         return f"[{self.get_priority_display()}] {self.title} ({self.get_status_display()})"
 
-    def mark_overdue(self) -> None:
-        """Помечает задачу просроченной, если дедлайн прошёл"""
+    def mark_overdue(self) -> bool:
+        """Помечает задачу просроченной, если дедлайн прошёл."""
 
         if self.due_at and timezone.now() > self.due_at and self.status != self.Status.DONE:
             old_status = self.status
@@ -78,9 +82,11 @@ class Task(models.Model):
                 new_value=self.status,
                 reason="Автоматическая пометка просрочки",
             )
+            return True
+        return False
 
     def save(self, *args, **kwargs) -> None:
-        """Переопределяем save, чтобы"""
+        """Сохраняет задачу и при необходимости логирует изменения."""
 
         is_create = self.pk is None
 
@@ -119,7 +125,7 @@ class Task(models.Model):
                 )
 
     class Meta:
-        """Метаданные модели Task"""
+        """Метаданные модели Task."""
 
         verbose_name = "Task"
         verbose_name_plural = "Tasks"
@@ -132,7 +138,7 @@ class Task(models.Model):
 
 
 class TaskAttachment(models.Model):
-    """Вложение к задаче"""
+    """Вложение к задаче."""
 
     task = models.ForeignKey(
         Task,
@@ -150,16 +156,19 @@ class TaskAttachment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        """Строковое представление вложения"""
+        """Возвращает строковое представление вложения."""
+
+        filename = self.file.name.split("/")[-1] if self.file else "no-file"
+        return f"Attachment #{self.pk} for task {self.task_id}: {filename}"
 
     class Meta:
-        """Метаданные вложения: сортировка свежие сначала"""
+        """Метаданные модели вложения."""
 
         ordering = ("-created_at",)
 
 
 class TaskChangeLog(models.Model):
-    """Журнал изменений задачи"""
+    """Журнал изменений задачи."""
 
     task = models.ForeignKey(
         Task,
@@ -180,7 +189,9 @@ class TaskChangeLog(models.Model):
     reason = models.CharField(max_length=255, blank=True)
 
     def __str__(self) -> str:
-        """Строковое представление записи журнала"""
+        """Возвращает строковое представление записи журнала."""
+
+        return f"Change[{self.field}] for task {self.task_id} at {self.changed_at}"
 
     @classmethod
     def log(
@@ -192,7 +203,7 @@ class TaskChangeLog(models.Model):
         reason: str = "",
         changed_by: Optional[User] = None,
     ) -> "TaskChangeLog":
-        """Фабричный метод для записи строки в журнал"""
+        """Создаёт и сохраняет запись в журнале изменений задачи."""
 
         return cls.objects.create(
             task=task,
@@ -204,7 +215,7 @@ class TaskChangeLog(models.Model):
         )
 
     class Meta:
-        """Метаданные журнала"""
+        """Метаданные модели журнала изменений."""
 
         ordering = ("-changed_at",)
         indexes = [

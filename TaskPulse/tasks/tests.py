@@ -1,3 +1,2 @@
-from django.test import TestCase
-
+"""tasks/tests.pyq"""
 # Create your tests here.
