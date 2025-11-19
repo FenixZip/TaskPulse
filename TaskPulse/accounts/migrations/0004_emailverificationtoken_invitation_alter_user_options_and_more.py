@@ -9,100 +9,135 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('accounts', '0003_alter_user_role_user_idx_user_invited_by'),
+        ("accounts", "0003_alter_user_role_user_idx_user_invited_by"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='EmailVerificationToken',
+            name="EmailVerificationToken",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('token', models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('used_at', models.DateTimeField(blank=True, null=True)),
-                ('expires_at', models.DateTimeField()),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "token",
+                    models.UUIDField(default=uuid.uuid4, editable=False, unique=True),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("used_at", models.DateTimeField(blank=True, null=True)),
+                ("expires_at", models.DateTimeField()),
             ],
         ),
         migrations.CreateModel(
-            name='Invitation',
+            name="Invitation",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('email', models.EmailField(max_length=254)),
-                ('token', models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('accepted_at', models.DateTimeField(blank=True, null=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("email", models.EmailField(max_length=254)),
+                (
+                    "token",
+                    models.UUIDField(default=uuid.uuid4, editable=False, unique=True),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("accepted_at", models.DateTimeField(blank=True, null=True)),
             ],
         ),
         migrations.AlterModelOptions(
-            name='user',
-            options={'verbose_name': 'user', 'verbose_name_plural': 'users'},
+            name="user",
+            options={"verbose_name": "user", "verbose_name_plural": "users"},
         ),
         migrations.AlterModelManagers(
-            name='user',
+            name="user",
             managers=[
-                ('objects', accounts.managers.UserManager()),
+                ("objects", accounts.managers.UserManager()),
             ],
         ),
         migrations.RemoveIndex(
-            model_name='user',
-            name='idx_user_role',
+            model_name="user",
+            name="idx_user_role",
         ),
         migrations.RemoveIndex(
-            model_name='user',
-            name='idx_user_invited_by',
+            model_name="user",
+            name="idx_user_invited_by",
         ),
         migrations.RemoveField(
-            model_name='user',
-            name='invited_by',
+            model_name="user",
+            name="invited_by",
         ),
         migrations.RemoveField(
-            model_name='user',
-            name='username',
+            model_name="user",
+            name="username",
         ),
         migrations.AddField(
-            model_name='user',
-            name='company',
-            field=models.CharField(blank=True, default='', max_length=255),
+            model_name="user",
+            name="company",
+            field=models.CharField(blank=True, default="", max_length=255),
         ),
         migrations.AddField(
-            model_name='user',
-            name='email_verified',
+            model_name="user",
+            name="email_verified",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='user',
-            name='full_name',
-            field=models.CharField(blank=True, default='', max_length=255),
+            model_name="user",
+            name="full_name",
+            field=models.CharField(blank=True, default="", max_length=255),
         ),
         migrations.AlterField(
-            model_name='user',
-            name='email',
+            model_name="user",
+            name="email",
             field=models.EmailField(max_length=254, unique=True),
         ),
         migrations.AlterField(
-            model_name='user',
-            name='role',
-            field=models.CharField(choices=[('CREATOR', 'Creator'), ('EXECUTOR', 'Executor')], default='CREATOR', max_length=24),
+            model_name="user",
+            name="role",
+            field=models.CharField(
+                choices=[("CREATOR", "Creator"), ("EXECUTOR", "Executor")],
+                default="CREATOR",
+                max_length=24,
+            ),
         ),
         migrations.AlterField(
-            model_name='user',
-            name='telegram_id',
-            field=models.BigIntegerField(blank=True, db_index=True, null=True, unique=True),
+            model_name="user",
+            name="telegram_id",
+            field=models.BigIntegerField(
+                blank=True, db_index=True, null=True, unique=True
+            ),
         ),
         migrations.AddField(
-            model_name='emailverificationtoken',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='email_tokens', to=settings.AUTH_USER_MODEL),
+            model_name="emailverificationtoken",
+            name="user",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="email_tokens",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='invitation',
-            name='invited_by',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='invitations', to=settings.AUTH_USER_MODEL),
+            model_name="invitation",
+            name="invited_by",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="invitations",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='invitation',
-            unique_together={('email', 'invited_by')},
+            name="invitation",
+            unique_together={("email", "invited_by")},
         ),
     ]

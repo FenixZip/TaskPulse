@@ -1,10 +1,11 @@
 """tests/accounts/test_auth_api.py"""
+
 import pytest
 from accounts.models import Invitation
 from django.contrib.auth import get_user_model
 
-
 User = get_user_model()
+
 
 @pytest.mark.django_db
 def test_register_creates_user(api_client):

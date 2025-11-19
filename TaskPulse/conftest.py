@@ -1,15 +1,17 @@
 """conftest.py"""
+
 from __future__ import annotations
 
 import datetime
 import shutil
+
 import pytest
-from django.core.files.base import ContentFile
-from rest_framework.test import APIClient
-from django.utils import timezone
 from django.contrib.auth import get_user_model
-from tasks.models import Task
+from django.core.files.base import ContentFile
+from django.utils import timezone
 from rest_framework.authtoken.models import Token
+from rest_framework.test import APIClient
+from tasks.models import Task
 
 
 @pytest.fixture
@@ -20,7 +22,9 @@ def user_factory(db):
     def _make_user(**kwargs):
         """Значения по умолчанию, соответствующие требованиям кастомной модели"""
         payload = {
-            "email": kwargs.pop("email", f"user_{timezone.now().timestamp()}@example.com"),
+            "email": kwargs.pop(
+                "email", f"user_{timezone.now().timestamp()}@example.com"
+            ),
             "full_name": kwargs.pop("full_name", "Test User"),
             "company": kwargs.pop("company", "APPLE"),
             "password": kwargs.pop("password", "passqwe123"),
@@ -30,10 +34,12 @@ def user_factory(db):
 
     return _make_user
 
+
 @pytest.fixture
 def creator(user_factory):
-    """"Создаёт пользователя с ролью CREATOR"""
+    """ "Создаёт пользователя с ролью CREATOR"""
     return user_factory(role="CREATOR")
+
 
 @pytest.fixture
 def executor(user_factory):
@@ -43,17 +49,20 @@ def executor(user_factory):
 
 # Tasks
 
+
 @pytest.fixture
 def api_client():
     """Возвращает DRF APIClient для удобного вызова API"""
     return APIClient()
 
+
 @pytest.fixture
 def auth_client(api_client, creator, django_user_model):
-    """ Возвращает авторизованный APIClient под пользователем-создателем"""
+    """Возвращает авторизованный APIClient под пользователем-создателем"""
     token, _ = Token.objects.get_or_create(user=creator)
     api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
     return api_client
+
 
 @pytest.fixture
 def auth_client_executor(api_client, executor):
@@ -61,6 +70,7 @@ def auth_client_executor(api_client, executor):
     token, _ = Token.objects.get_or_create(user=executor)
     api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
     return api_client
+
 
 @pytest.fixture
 def media_tmpdir(settings, tmp_path):
@@ -72,6 +82,7 @@ def media_tmpdir(settings, tmp_path):
     yield tmpdir
     # Явная очистка (на всякий случай, tmp_path и так чистится)
     shutil.rmtree(tmpdir, ignore_errors=True)
+
 
 @pytest.fixture
 def task_factory(creator, executor):
@@ -92,11 +103,13 @@ def task_factory(creator, executor):
 
     return _make_task
 
+
 @pytest.fixture
 def sample_file():
     """Возвращает крошечный in-memory файл (txt), чтобы проверять загрузку вложений"""
     f = ContentFile(b"hello world", name="hello.txt")
     return f
+
 
 @pytest.fixture
 def email_locmem(settings):

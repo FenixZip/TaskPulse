@@ -14,16 +14,25 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
+
+"""Корневой URL-конфиг проекта TaskPulse."""
+
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path, include
+from django.contrib import admin
+from django.urls import include, path
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/auth/', include('accounts.urls')),
-    path('api/', include('tasks.urls')),
+    # Админка Django
+    path("admin/", admin.site.urls),
+    # Авторизация / регистрация / инвайты
+    path("api/auth/", include("accounts.urls")),
+    # Задачи и отчёты (tasks + reports/monthly)
+    path("api/", include("tasks.urls")),
+    # Интеграции (Telegram: webhook + API-профиль)
+    path("api/", include("integrations.urls")),
 ]
 
+# В dev-режиме раздаём медиа-файлы через Django
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

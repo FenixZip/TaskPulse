@@ -1,4 +1,5 @@
 """tasks/serializers"""
+
 from typing import Any, Dict, Optional
 
 from django.contrib.auth import get_user_model
@@ -55,7 +56,9 @@ class TaskSerializer(serializers.ModelSerializer):
     """
 
     attachments = TaskAttachmentSerializer(many=True, read_only=True)
-    priority_display = serializers.CharField(source="get_priority_display", read_only=True)
+    priority_display = serializers.CharField(
+        source="get_priority_display", read_only=True
+    )
     status_display = serializers.CharField(source="get_status_display", read_only=True)
 
     class Meta:
@@ -111,5 +114,7 @@ class TaskActionSerializer(serializers.Serializer):
 
         action = self.context.get("action")
         if action == "extend_1d" and not attrs.get("comment"):
-            raise serializers.ValidationError("Для продления на сутки обязателен комментарий")
+            raise serializers.ValidationError(
+                "Для продления на сутки обязателен комментарий"
+            )
         return attrs

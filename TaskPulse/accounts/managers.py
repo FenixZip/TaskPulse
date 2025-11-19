@@ -1,4 +1,5 @@
 """accounts/managers.py"""
+
 from django.contrib.auth.base_user import BaseUserManager
 
 

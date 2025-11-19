@@ -1,21 +1,24 @@
 """accounts/urls.py"""
+
 from django.urls import path
 
-from .views import (AcceptInviteView, InvitationCreateView, LoginView,
-                    RegisterView, verify_email)
+from .views import (
+    AcceptInviteView,
+    InvitationCreateView,
+    LoginView,
+    RegisterView,
+    verify_email,
+)
 
 urlpatterns = [
-    # POST /api/auth/register → регистрация
+    # POST /api/auth/register/
     path("register/", RegisterView.as_view(), name="auth-register"),
-
-    # POST /api/auth/login → логин за токеном
+    # POST /api/auth/login/
     path("login/", LoginView.as_view(), name="auth-login"),
-
-    # POST /api/invitations → создать приглашение
+    # POST /api/auth/invitations/
     path("invitations/", InvitationCreateView.as_view(), name="invitation-create"),
-
-    # Принятие инвайта (по токену)
-    path("accept-invite/", AcceptInviteView.as_view(), name="reports-monthly"),
-    # Подтверждение email по токену
-    path("verify-email/", verify_email, name="reports-monthly"),
+    # POST /api/auth/accept-invite/
+    path("accept-invite/", AcceptInviteView.as_view(), name="auth-accept-invite"),
+    # GET /api/auth/verify-email/?token=...
+    path("verify-email/", verify_email, name="auth-verify-email"),
 ]

@@ -1,4 +1,5 @@
 """tasks/filters.py"""
+
 import django_filters
 
 from .models import Task
@@ -8,9 +9,7 @@ class TaskFilter(django_filters.FilterSet):
     """Фильтры для списка задач:"""
 
     # имя задачи (поиск по подстроке в названии)
-    name = django_filters.CharFilter(
-        field_name="title", lookup_expr="icontains"
-    )
+    name = django_filters.CharFilter(field_name="title", lookup_expr="icontains")
 
     # исполнитель: ?assignee=me или ?assignee=<user_id>
     assignee = django_filters.CharFilter(method="filter_assignee")
@@ -21,12 +20,8 @@ class TaskFilter(django_filters.FilterSet):
     )
 
     # дедлайн: интервал дат
-    due_from = django_filters.IsoDateTimeFilter(
-        field_name="due_at", lookup_expr="gte"
-    )
-    due_to = django_filters.IsoDateTimeFilter(
-        field_name="due_at", lookup_expr="lte"
-    )
+    due_from = django_filters.IsoDateTimeFilter(field_name="due_at", lookup_expr="gte")
+    due_to = django_filters.IsoDateTimeFilter(field_name="due_at", lookup_expr="lte")
 
     class Meta:
         model = Task

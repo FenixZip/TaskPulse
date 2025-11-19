@@ -1,4 +1,5 @@
 """accounts/serializers.py"""
+
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
@@ -16,7 +17,9 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True,
         min_length=8,
-        validators=[validate_password],  # используем стандартный валидатор прямо на поле
+        validators=[
+            validate_password
+        ],  # используем стандартный валидатор прямо на поле
     )
 
     class Meta:
@@ -54,7 +57,9 @@ class LoginSerializer(serializers.Serializer):
         user = authenticate(request=request, email=email, password=password)
 
         if not user:
-            raise serializers.ValidationError(self.error_messages["invalid_credentials"])
+            raise serializers.ValidationError(
+                self.error_messages["invalid_credentials"]
+            )
 
         if not getattr(user, "email_verified", False):
             raise serializers.ValidationError(self.error_messages["email_not_verified"])
@@ -97,12 +102,9 @@ class AcceptInviteSerializer(serializers.Serializer):
         """Находит инвайт по токену, создаёт/обновляет пользователя EXECUTOR."""
 
         try:
-            inv = (
-                Invitation.objects.select_related("invited_by")
-                .get(
-                    token=validated_data["token"],
-                    accepted_at__isnull=True,
-                )
+            inv = Invitation.objects.select_related("invited_by").get(
+                token=validated_data["token"],
+                accepted_at__isnull=True,
             )
         except Invitation.DoesNotExist:
             raise serializers.ValidationError("Инвайт недействителен")

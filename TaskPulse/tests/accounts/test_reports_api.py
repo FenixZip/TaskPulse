@@ -1,4 +1,5 @@
 """tests/accounts/test_reports_api.py"""
+
 from datetime import timedelta
 
 import pytest
@@ -101,7 +102,9 @@ def test_monthly_report_user_me_filters_by_assignee_and_month(
 
 
 @pytest.mark.django_db
-def test_monthly_report_csv_format_returns_csv(auth_client_executor, task_factory, executor):
+def test_monthly_report_csv_format_returns_csv(
+    auth_client_executor, task_factory, executor
+):
     """
     Цель: при ?format=csv отчёт должен вернуться в формате CSV с корректными цифрами.
     Оракул/стратегия:

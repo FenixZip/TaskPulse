@@ -1,4 +1,5 @@
 """tasks/views.py"""
+
 from datetime import timedelta
 
 from django.utils import timezone
@@ -9,10 +10,14 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 
 from .filters import TaskFilter
-from .models import Task, TaskAttachment, TaskChangeLog
+from .models import Task, TaskChangeLog
 from .permissions import IsCreatorOrAssignee
-from .serializers import (TaskActionSerializer, TaskAttachmentSerializer,
-                          TaskSerializer, TaskUpsertSerializer)
+from .serializers import (
+    TaskActionSerializer,
+    TaskAttachmentSerializer,
+    TaskSerializer,
+    TaskUpsertSerializer,
+)
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -27,9 +32,8 @@ class TaskViewSet(viewsets.ModelViewSet):
     - POST /api/tasks/{id}/extend-1d     — действие “продлить на сутки”
     """
 
-    queryset = (
-        Task.objects.select_related("creator", "assignee")
-        .prefetch_related("attachments")
+    queryset = Task.objects.select_related("creator", "assignee").prefetch_related(
+        "attachments"
     )
     permission_classes = [permissions.IsAuthenticated, IsCreatorOrAssignee]
     serializer_class = TaskSerializer
