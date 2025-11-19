@@ -1,8 +1,10 @@
 """accounts/permissions.py"""
+
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import BasePermission
 
 User = get_user_model()
+
 
 class IsCreator(BasePermission):
     """Разрешение, которое пропускает только аутентифицированных пользователей с ролью CREATOR."""

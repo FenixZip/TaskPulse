@@ -1,4 +1,5 @@
 """tests/accounts/test_models.py"""
+
 from datetime import timedelta
 
 import pytest
@@ -14,13 +15,15 @@ def test_user_str_representation(creator):
     expected = f"{creator.email} -> {creator.full_name} -> {creator.company} -> {creator.position} -> {creator.role}"
     assert str(creator) == expected
 
+
 @pytest.mark.django_db
 def test_user_email_uniqueness(user_factory):
     """Проверяем уникальность email"""
 
-    first = user_factory(email='unique@example.com')
+    first = user_factory(email="unique@example.com")
     with pytest.raises(IntegrityError):
         user_factory(email=first.email)
+
 
 @pytest.mark.django_db
 def test_user_telegram_id_uniqueness_allows_null(user_factory):
@@ -31,12 +34,13 @@ def test_user_telegram_id_uniqueness_allows_null(user_factory):
     assert u1.telegram_id is None and u2.telegram_id is None
 
     u1.telegram_id = 1234567890
-    u1.save(update_fields=['telegram_id'])
+    u1.save(update_fields=["telegram_id"])
 
     u2.telegram_id = 1234567890
 
     with pytest.raises(IntegrityError):
-        u2.save(update_fields=['telegram_id'])
+        u2.save(update_fields=["telegram_id"])
+
 
 @pytest.mark.django_db
 def test_user_defaults(user_factory):
@@ -52,6 +56,7 @@ def test_user_defaults(user_factory):
 
 # ТЕСТЫ EmailVerificationToken (EVT)
 
+
 @pytest.mark.django_db
 def test_evt_issue_for_creates_valid_token(creator):
     """Проверяем EmailVerificationToken"""
@@ -61,10 +66,15 @@ def test_evt_issue_for_creates_valid_token(creator):
     assert evt.pk is not None
     assert evt.user_id == creator.id
     assert evt.expires_at > start
-    assert timedelta(hours=47, minutes=59) < (evt.expires_at - start) <= timedelta(hours=48, minutes=1)
+    assert (
+        timedelta(hours=47, minutes=59)
+        < (evt.expires_at - start)
+        <= timedelta(hours=48, minutes=1)
+    )
 
     ev2 = EmailVerificationToken.issue_for(creator)
     assert evt.token != ev2.token
+
 
 @pytest.mark.django_db
 def test_evt_is_valid_true_until_used_or_expired(creator):
@@ -84,10 +94,13 @@ def test_evt_is_valid_true_until_used_or_expired(creator):
     assert evt_refetched.is_valid() is False
 
     # Смоделируем просрочку: вручную передвинем expires_at в прошлое и проверим is_valid() == False
-    evt_refetched.used_at = None  # Сбросим, чтобы проверить исключительно истечение срока
+    evt_refetched.used_at = (
+        None  # Сбросим, чтобы проверить исключительно истечение срока
+    )
     evt_refetched.expires_at = timezone.now() - timedelta(seconds=1)
     evt_refetched.save(update_fields=["used_at", "expires_at"])
     assert evt_refetched.is_valid() is False
+
 
 @pytest.mark.django_db
 def test_evt_mark_used_idempotent_like(creator):
@@ -105,6 +118,7 @@ def test_evt_mark_used_idempotent_like(creator):
 
 # ТЕСТЫ Invitation (уникальности и методы)
 
+
 @pytest.mark.django_db
 def test_invitation_unique_together_email_invited_by(creator):
     """Проверяем ограничение"""
@@ -114,6 +128,7 @@ def test_invitation_unique_together_email_invited_by(creator):
     # Повторная попытка для того же (email, invited_by) должна упасть по уникальности
     with pytest.raises(IntegrityError):
         Invitation.objects.create(email="worker@example.com", invited_by=creator)
+
 
 @pytest.mark.django_db
 def test_invitation_allows_same_email_from_different_inviter(creator, user_factory):
@@ -129,6 +144,7 @@ def test_invitation_allows_same_email_from_different_inviter(creator, user_facto
     assert inv1.pk is not None and inv2.pk is not None
     assert inv1.invited_by_id != inv2.invited_by_id
 
+
 @pytest.mark.django_db
 def test_invitation_mark_accepted_sets_timestamp(creator):
     """Проверяем, что mark_accepted() устанавливает accepted_at и сохраняет в БД"""
@@ -141,6 +157,7 @@ def test_invitation_mark_accepted_sets_timestamp(creator):
     # Перечитываем объект из БД, чтобы убедиться в персистентности изменений
     refreshed = Invitation.objects.get(pk=inv.pk)
     assert refreshed.accepted_at is not None
+
 
 @pytest.mark.django_db
 def test_invitation_token_is_uuid_and_unique(creator):

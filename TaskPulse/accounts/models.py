@@ -1,4 +1,5 @@
 """accounts/models.py"""
+
 import uuid
 from datetime import timedelta
 
@@ -20,7 +21,7 @@ class User(AbstractUser):
 
     username = None
     full_name = models.CharField(max_length=255, blank=True, default="")
-    company     = models.CharField(max_length=255, blank=True, default="")
+    company = models.CharField(max_length=255, blank=True, default="")
     position = models.CharField(
         max_length=255,
         blank=True,
@@ -33,7 +34,9 @@ class User(AbstractUser):
         default=Role.CREATOR,
     )
     email = models.EmailField(unique=True)
-    telegram_id = models.BigIntegerField(unique=True, db_index=True, null=True, blank=True)
+    telegram_id = models.BigIntegerField(
+        unique=True, db_index=True, null=True, blank=True
+    )
     email_verified = models.BooleanField(default=False)
 
     objects = UserManager()
@@ -42,14 +45,14 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ["full_name", "company", "position"]
 
     def __str__(self):
-
         """Возвращает строковое представление пользователя для админки/отладчика."""
+
         return f"{self.email} -> {self.full_name} -> {self.company} -> {self.position} -> {self.role}"
 
 
 class EmailVerificationToken(models.Model):
-
     """Токен подтверждения email: позволяет подтвердить адрес пользователя по ссылке."""
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -93,7 +96,9 @@ class Invitation(models.Model):
     """Приглашение исполнителя"""
 
     email = models.EmailField()
-    invited_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="invitations")
+    invited_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="invitations"
+    )
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     accepted_at = models.DateTimeField(null=True, blank=True)

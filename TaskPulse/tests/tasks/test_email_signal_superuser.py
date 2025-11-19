@@ -1,4 +1,5 @@
 """tests/tasks/test_email_signal_superuser.py"""
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core import mail

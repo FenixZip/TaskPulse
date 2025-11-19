@@ -1,4 +1,5 @@
 """tasks/views_report.py"""
+
 import csv
 
 from django.db.models import Count

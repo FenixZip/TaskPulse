@@ -4,15 +4,17 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('accounts', '0004_emailverificationtoken_invitation_alter_user_options_and_more'),
+        (
+            "accounts",
+            "0004_emailverificationtoken_invitation_alter_user_options_and_more",
+        ),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='position',
-            field=models.CharField(max_length=255, null=True, verbose_name='Должность'),
+            model_name="user",
+            name="position",
+            field=models.CharField(max_length=255, null=True, verbose_name="Должность"),
         ),
     ]
