@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
-
+from datetime import timedelta
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -56,8 +56,8 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django_filters",
     "accounts.apps.AccountsConfig",
-    "tasks",
     "integrations",
+    "tasks.apps.TasksConfig",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -73,6 +73,27 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
 }
+
+
+# === Celery ===
+
+# брокер — для реальной работы лучше Redis (это пример)
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+
+# В тестах / локально можно выполнять задачи синхронно,
+# чтобы не поднимать воркер Celery
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
+
+# Периодическая задача напоминаний (раз в 15 минут)
+CELERY_BEAT_SCHEDULE = {
+    "tasks.send_due_soon_reminders": {
+        "task": "tasks.tasks_reminders.send_due_soon_reminders",
+        "schedule": timedelta(minutes=15),
+    },
+}
+
 
 # На время разработки письма будем выводить в консоль
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

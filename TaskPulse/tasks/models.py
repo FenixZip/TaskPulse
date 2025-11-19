@@ -64,6 +64,7 @@ class Task(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self) -> str:
         """Возвращает человеко-читаемое строковое представление задачи."""
