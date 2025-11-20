@@ -1,5 +1,5 @@
 """integrations/views_api.py"""
-
+from django.shortcuts import get_object_or_404
 from integrations.models import TelegramProfile
 from integrations.serializers import TelegramProfileSerializer
 from rest_framework import mixins, viewsets
@@ -19,7 +19,7 @@ class TelegramProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet)
 
     def get_object(self):
         # либо вернём профиль, либо вызовем 404
-        return TelegramProfile.objects.get(user=self.request.user)
+        return get_object_or_404(TelegramProfile, user=self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
         """Переопределяем retrieve, чтобы вызвать get_object без pk в URL."""

@@ -35,7 +35,7 @@ class User(AbstractUser):
     )
     email = models.EmailField(unique=True)
     telegram_id = models.BigIntegerField(
-        unique=True, db_index=True, null=True, blank=True
+        unique=True, null=True, blank=True
     )
     email_verified = models.BooleanField(default=False)
 

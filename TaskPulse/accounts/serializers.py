@@ -57,9 +57,7 @@ class LoginSerializer(serializers.Serializer):
         user = authenticate(request=request, email=email, password=password)
 
         if not user:
-            raise serializers.ValidationError(
-                self.error_messages["invalid_credentials"]
-            )
+            raise serializers.ValidationError({"detail": self.error_messages["invalid_credentials"]})
 
         if not getattr(user, "email_verified", False):
             raise serializers.ValidationError(self.error_messages["email_not_verified"])

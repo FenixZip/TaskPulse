@@ -5,6 +5,7 @@ from integrations.views_api import TelegramProfileViewSet
 from integrations.views_telegram import TelegramWebhookView
 from rest_framework.routers import DefaultRouter
 
+app_name = "integrations"
 # DRF-роутер для API-интерфейсов интеграций
 router = DefaultRouter()
 

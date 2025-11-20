@@ -10,6 +10,8 @@ from .views import (
     verify_email,
 )
 
+app_name = "accounts"
+
 urlpatterns = [
     # POST /api/auth/register/
     path("register/", RegisterView.as_view(), name="auth-register"),

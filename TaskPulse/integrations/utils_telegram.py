@@ -1,7 +1,9 @@
 """integrations/utils_telegram.py"""
-
+import logging
 import requests
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 def send_telegram_message(
@@ -9,11 +11,13 @@ def send_telegram_message(
 ) -> None:
     """Отправляет сообщение пользователю в Telegram через Bot API."""
 
-    if not settings.TELEGRAM_BOT_TOKEN:
+    bot_token = getattr(settings, "TELEGRAM_BOT_TOKEN", None)
+    if not bot_token:
+        logger.warning("TELEGRAM_BOT_TOKEN не настроен, сообщение не отправлено")
         return
 
     # ⬇формируем базовый URL метода sendMessage
-    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
     # ⬇собираем полезную нагрузку (payload) для POST-запроса
     payload: dict = {
@@ -28,11 +32,11 @@ def send_telegram_message(
 
     # выполняем POST-запрос к Telegram
     try:
-        requests.post(url, json=payload, timeout=5)
-    except Exception:
-        # в проде здесь нужно логировать ошибку, а не молча проглатывать
-        # но чтобы не заваливать консоль во время разработки/тестов — просто pass
-        pass
+        resp = requests.post(url, json=payload, timeout=5)
+        if resp.status_code != 200:
+            logger.warning("Telegram API sendMessage error %s: %s", resp.status_code, resp.text)
+    except Exception:  # noqa: BLE001
+        logger.exception("Ошибка при отправке сообщения в Telegram")
 
 
 def build_task_link(task_id: int) -> str:

@@ -1,67 +1,43 @@
 """integrations/views_telegram.py"""
-
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import timedelta
 from typing import Optional, Tuple
 
-import requests
-from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
+from django.db import IntegrityError
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from integrations.models import TelegramProfile, TelegramUpdate, TelegramLinkToken
+from integrations.permissions import IsTelegramWebhook
+from integrations.utils_telegram import send_telegram_message
 from tasks.models import Task, TaskActionLog
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-def send_telegram_message(chat_id: int, text: str) -> None:
-    """Отправляет простое текстовое сообщение в Telegram-чат."""
-
-    bot_token = getattr(settings, "TELEGRAM_BOT_TOKEN", None)
-    if not bot_token:
-        logger.warning("TELEGRAM_BOT_TOKEN не настроен, сообщение не отправлено")
-        return
-
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": text,
-        "parse_mode": "HTML",
-    }
-
-    try:
-        resp = requests.post(url, json=payload, timeout=5)
-        if resp.status_code != 200:
-            logger.warning("Telegram API sendMessage error: %s", resp.text)
-    except Exception:  # noqa: BLE001
-        logger.exception("Ошибка при отправке сообщения в Telegram")
-
-
 @method_decorator(csrf_exempt, name="dispatch")
 class TelegramWebhookView(APIView):
     """
     CBV-обработчик Telegram-вебхука.
-    - проверяем секрет вебхука (если TELEGRAM_WEBHOOK_SECRET настроен);
+    - проверяем секрет вебхука через IsTelegramWebhook;
     - отсекаем дубликаты по update_id;
     - обрабатываем /start <token> и callback-кнопки.
     """
 
     authentication_classes: list = []
-    permission_classes: list = []
+    permission_classes = [IsTelegramWebhook]
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         """Основной вход, куда Telegram присылает JSON update."""
-
-        if not self._check_secret(request):
-            return Response({"detail": "Forbidden"}, status=403)
 
         update = request.data
 
@@ -78,43 +54,48 @@ class TelegramWebhookView(APIView):
 
         return Response({"status": "ok"})
 
-    def _check_secret(self, request: Request) -> bool:
-        """Проверяет X-Telegram-Bot-Api-Secret-Token, если TELEGRAM_WEBHOOK_SECRET задан."""
-
-        expected_secret = getattr(settings, "TELEGRAM_WEBHOOK_SECRET", None)
-        if not expected_secret:
-            return True
-
-        got = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
-        return got == expected_secret
-
     def _is_duplicate_update(self, update_id: int) -> bool:
-        """Примитивная идемпотентность по update_id через кэш."""
+        """
+        Идемпотентность по update_id через модель TelegramUpdate.
+        Если запись с таким update_id уже существует – считаем дубликатом.
+        """
 
-        cache_key = f"telegram_update_{update_id}"
-        if cache.get(cache_key):
+        try:
+            TelegramUpdate.objects.create(update_id=update_id)
+            return False
+        except IntegrityError:
             return True
-        cache.set(cache_key, True, timeout=300)
-        return False
+
+    # ---------------------- обработка обычных сообщений ---------------------- #
 
     def _handle_message(self, message: dict) -> None:
-        """Обрабатывает обычные текстовые сообщения. Сейчас интересует только /start."""
+        """
+        Обрабатывает обычные текстовые сообщения.
+        Сейчас интересует только /start <token>.
+        """
 
         chat_id = message["chat"]["id"]
-        text = message.get("text", "")
+        text = (message.get("text") or "").strip()
 
         if text.startswith("/start"):
             parts = text.split(maxsplit=1)
-            token = parts[1] if len(parts) > 1 else ""
-            self._handle_start_command(chat_id=chat_id, token=token, message=message)
+            token = parts[1].strip() if len(parts) > 1 else ""
+            self._handle_start_command(chat_id, token, message)
         else:
+            # пока других команд не поддерживаем
             send_telegram_message(
                 chat_id,
-                "Привет! Используйте /start <токен>, чтобы привязать Telegram-аккаунт к профилю.",
+                "Я пока понимаю только команду:\n"
+                "<code>/start ВАШ_ТОКЕН</code>",
             )
 
     def _handle_start_command(self, chat_id: int, token: str, message: dict) -> None:
-        """Обработка /start <token>: ищем пользователя по токену и сохраняем telegram_id."""
+        """
+        Обработка /start <token>:
+        - token — это UUID из TelegramLinkToken;
+        - ищем TelegramLinkToken, создаём/обновляем TelegramProfile;
+        - помечаем токен как использованный.
+        """
 
         telegram_id = message["from"]["id"]
 
@@ -126,24 +107,49 @@ class TelegramWebhookView(APIView):
             )
             return
 
+        # токен должен быть UUID из TelegramLinkToken
         try:
-            user_id = int(token)
-            user = User.objects.get(pk=user_id)
-        except (ValueError, User.DoesNotExist):
+            token_uuid = uuid.UUID(token)
+        except ValueError:
             send_telegram_message(
                 chat_id,
-                "Не удалось найти пользователя по токену. "
-                "Убедитесь, что используете правильную ссылку из профиля.",
+                "Некорректный формат токена. "
+                "Скопируйте ссылку /start из веб-профиля полностью.",
             )
             return
 
-        user.telegram_id = telegram_id
-        user.save(update_fields=["telegram_id"])
+        try:
+            link = TelegramLinkToken.objects.select_related("user").get(
+                token=token_uuid,
+                is_used=False,
+            )
+        except TelegramLinkToken.DoesNotExist:
+            send_telegram_message(
+                chat_id,
+                "Токен не найден или уже использован. "
+                "Сгенерируйте новый токен в веб-профиле.",
+            )
+            return
+
+        # создаём или обновляем TelegramProfile для пользователя
+        TelegramProfile.objects.update_or_create(
+            user=link.user,
+            defaults={
+                "telegram_user_id": telegram_id,
+                "chat_id": chat_id,
+            },
+        )
+
+        # помечаем токен как использованный
+        link.is_used = True
+        link.save(update_fields=["is_used"])
 
         send_telegram_message(
             chat_id,
             "✅ Telegram-аккаунт успешно привязан к вашему профилю.",
         )
+
+    # --------------------- обработка callback-кнопок --------------------- #
 
     def _handle_callback_query(self, callback: dict) -> None:
         """Обрабатывает callback_query от инлайн-кнопок."""
@@ -158,9 +164,13 @@ class TelegramWebhookView(APIView):
             send_telegram_message(chat_id, "Не удалось распознать действие кнопки.")
             return
 
+        # ищем профиль по telegram_user_id
         try:
-            user = User.objects.get(telegram_id=telegram_id)
-        except User.DoesNotExist:
+            profile = TelegramProfile.objects.select_related("user").get(
+                telegram_user_id=telegram_id
+            )
+            user = profile.user
+        except TelegramProfile.DoesNotExist:
             send_telegram_message(
                 chat_id,
                 "Ваш Telegram-аккаунт не привязан к профилю. "
@@ -168,10 +178,15 @@ class TelegramWebhookView(APIView):
             )
             return
 
+        # ищем задачу, принадлежащую этому пользователю
         try:
-            task = Task.objects.get(pk=task_id)
+            # ⚠️ здесь подставь нужное поле связи с пользователем
+            task = Task.objects.get(pk=task_id, assignee=user)
         except Task.DoesNotExist:
-            send_telegram_message(chat_id, f"Задача с ID {task_id} не найдена.")
+            send_telegram_message(
+                chat_id,
+                f"Задача с ID {task_id} не найдена или вам не принадлежит.",
+            )
             return
 
         if action == "confirm_on_time":
@@ -188,11 +203,10 @@ class TelegramWebhookView(APIView):
             action, task_id_str = data.split(":", maxsplit=1)
             task_id = int(task_id_str)
             return action, task_id
-        except Exception:  # noqa: BLE001
-            logger.warning("Не удалось распарсить callback_data: %r", data)
+        except (ValueError, AttributeError):
             return None, None
 
-    # ===== конкретные действия =====
+    # ------------------------- бизнес-обработчики ------------------------- #
 
     def _handle_confirm_on_time(self, task: Task, user: User, chat_id: int) -> None:
         """«Сделаю вовремя»: пишем запись в TaskActionLog."""
