@@ -43,6 +43,16 @@ class TaskViewSet(viewsets.ModelViewSet):
     ordering_fields = ["due_at", "updated_at", "created_at", "priority", "status"]
     ordering = ["-updated_at"]
 
+    def get_queryset(self):
+        qs = (
+            super()
+            .get_queryset()
+            .select_related("creator", "assignee")
+            .prefetch_related("attachments", "changes", "actions")
+        )
+
+        return qs
+
     def get_serializer_class(self):
         """Возвращает сериализатор в зависимости от действия (list/retrieve vs create/update)."""
 
