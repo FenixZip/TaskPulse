@@ -8,15 +8,19 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from django.db.models import Q
+from django.contrib.auth import get_user_model
 
 from .filters import TaskFilter
-from .models import Task, TaskChangeLog
+from .models import Task, TaskChangeLog, TaskMessage
 from .permissions import IsCreatorOrAssignee
 from .serializers import (
     TaskActionSerializer,
     TaskAttachmentSerializer,
     TaskSerializer,
     TaskUpsertSerializer,
+    TaskMessageSerializer
 )
 
 
@@ -156,3 +160,111 @@ class TaskViewSet(viewsets.ModelViewSet):
             TaskSerializer(task, context={"request": request}).data,
             status=status.HTTP_200_OK,
         )
+
+
+class ConversationMessagesView(APIView):
+    """
+    Общий диалог между текущим пользователем и другим пользователем (создатель ↔ исполнитель)
+    по всем задачам сразу.
+    GET /api/tasks/conversation-messages/?user_id=<id>
+    POST /api/tasks/conversation-messages/
+      data:
+        - user_id: id собеседника (создатель/исполнитель)
+        - task: id задачи, к которой относится сообщение
+        - text: текст (опционально)
+        - file: файл (опционально, multipart/form-data)
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        other_id = request.query_params.get("user_id")
+
+        if not other_id:
+            return Response(
+                {"detail": "Не указан параметр user_id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            other_id = int(other_id)
+        except ValueError:
+            return Response(
+                {"detail": "Некорректный user_id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            other_id = int(other_id)
+        except ValueError:
+            return Response(
+                {"detail": "Некорректный user_id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            other = User.objects.get(pk=other_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Пользователь не найден."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+            # Все сообщения по задачам, где user и other связаны как creator/assignee
+            qs = (
+                TaskMessage.objects.filter(
+                    Q(task__creator=user, task__assignee=other)
+                    | Q(task__creator=other, task__assignee=user)
+                )
+                .select_related("task", "sender")
+                .order_by("created_at")
+            )
+
+            serializer = TaskMessageSerializer(qs, many=True, context={"request": request})
+            return Response(serializer.data)
+
+    def post(self, request):
+        user = request.user
+        other_id = request.data.get("user_id")
+        task_id = request.data.get("task")
+
+        if not other_id or not task_id:
+            return Response(
+                {"detail": "Нужно указать user_id и task."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            other = User.objects.get(pk=other_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Пользователь не найден."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            task = Task.objects.get(pk=task_id)
+        except Task.DoesNotExist:
+            return Response(
+                {"detail": "Задача не найдена."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+            # проверяем, что эта задача действительно между текущим пользователем и other
+            if not (
+                    (task.creator_id == user.id and task.assignee_id == other.id)
+                    or (task.creator_id == other.id and task.assignee_id == user.id)
+            ):
+                return Response(
+                    {"detail": "Нет доступа к чату по этой задаче."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            serializer = TaskMessageSerializer(
+                data=request.data,
+                context={"request": request},
+            )
+            serializer.is_valid(raise_exception=True)
+            message = serializer.save(task=task, sender=user)
+
+            out = TaskMessageSerializer(message, context={"request": request})
+            return Response(out.data, status=status.HTTP_201_CREATED)

@@ -19,6 +19,14 @@ def task_attachment_upload_to(instance: "TaskAttachment", filename: str) -> str:
     return f"task_attachments/{folder}/{unique}_{filename}"
 
 
+def task_message_upload_to(instance, filename):
+    """Путь для файлов, прикреплённых в чате по задаче."""
+
+    folder = f"{instance.task_id or 'pending'}"
+    unique = uuid.uuid4()
+    return f"task_messages/{folder}/{unique}_{filename}"
+
+
 class Task(models.Model):
     """Модель задачи."""
 
@@ -39,6 +47,7 @@ class Task(models.Model):
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    executor_comment = models.TextField(blank=True)
     priority = models.CharField(
         max_length=10,
         choices=Priority.choices,
@@ -75,9 +84,9 @@ class Task(models.Model):
         """Помечает задачу просроченной, если дедлайн прошёл."""
 
         if (
-            self.due_at
-            and timezone.now() > self.due_at
-            and self.status != self.Status.DONE
+                self.due_at
+                and timezone.now() > self.due_at
+                and self.status != self.Status.DONE
         ):
             old_status = self.status
             self.status = self.Status.OVERDUE
@@ -145,16 +154,51 @@ class Task(models.Model):
             models.Index(fields=["due_at"], name="idx_task_due"),
         ]
 
+    @property
+    def creator_name(self) -> str:
+        """Удобное поле для ФИО создателя задачи."""
+
+        return self.creator.full_name or self.creator.email
+
+    def last_result_file_url(self) -> Optional[str]:
+        """
+        URL последнего файла-результата от исполнителя,
+        если такой есть.
+        """
+
+        result = (
+            self.attachments
+            .filter(kind=TaskAttachment.Kind.RESULT)
+            .order_by("-created_at")
+            .first()
+        )
+        if result and result.file:
+            try:
+                return result.file.url
+            except ValueError:
+                return None
+        return None
+
 
 class TaskAttachment(models.Model):
     """Вложение к задаче."""
+
+    class Kind(models.TextChoices):
+        GENERAL = "general", "Общее вложение"
+        RESULT = "result", "Результат выполнения"
 
     task = models.ForeignKey(
         Task,
         on_delete=models.CASCADE,
         related_name="attachments",
     )
+
     file = models.FileField(upload_to=task_attachment_upload_to)
+    kind = models.CharField(
+        max_length=20,
+        choices=Kind.choices,
+        default=Kind.GENERAL,
+    )
     uploaded_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -204,13 +248,13 @@ class TaskChangeLog(models.Model):
 
     @classmethod
     def log(
-        cls,
-        task: Task,
-        field: str,
-        old_value: Optional[str],
-        new_value: Optional[str],
-        reason: str = "",
-        changed_by: Optional[User] = None,
+            cls,
+            task: Task,
+            field: str,
+            old_value: Optional[str],
+            new_value: Optional[str],
+            reason: str = "",
+            changed_by: Optional[User] = None,
     ) -> "TaskChangeLog":
         """Создаёт и сохраняет запись в журнале изменений задачи."""
 
@@ -303,14 +347,14 @@ class TaskActionLog(models.Model):
 
     @classmethod
     def log_action(
-        cls,
-        *,
-        task: Task,
-        action: str,
-        user: Optional[User] = None,
-        comment: str = "",
-        old_due_at: Optional[datetime] = None,
-        new_due_at: Optional[datetime] = None,
+            cls,
+            *,
+            task: Task,
+            action: str,
+            user: Optional[User] = None,
+            comment: str = "",
+            old_due_at: Optional[datetime] = None,
+            new_due_at: Optional[datetime] = None,
     ) -> "TaskActionLog":
         """Удобный класс-метод для записи действия в журнал."""
 
@@ -342,3 +386,45 @@ class TaskActionLog(models.Model):
             # индекс по типу действия — удобно для агрегирования по action
             models.Index(fields=["action"], name="idx_task_actionlog_action"),
         ]
+
+
+class TaskMessage(models.Model):
+    """Сообщение в чате по задаче (Создатель ↔ Исполнитель)."""
+
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name="messages",
+    )
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="task_messages",
+    )
+    text = models.TextField(blank=True)
+
+    file = models.FileField(
+        upload_to=task_message_upload_to,
+        blank=True,
+        null=True,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("created_at",)
+
+    def __str__(self) -> str:
+        return f"Message #{self.pk} for task {self.task_id} from {self.sender_id}"
+
+    @property
+    def sender_name(self) -> str:
+        return self.sender.full_name or self.sender.email
+
+    @property
+    def is_from_creator(self) -> bool:
+        return self.sender_id == self.task.creator_id
+
+    @property
+    def is_from_executor(self) -> bool:
+        return self.sender_id == self.task.assignee_id

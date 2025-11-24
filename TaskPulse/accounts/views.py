@@ -5,6 +5,7 @@ from rest_framework import generics, permissions
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .permissions import IsCreator
 from .serializers import (
@@ -12,7 +13,9 @@ from .serializers import (
     InvitationCreateSerializer,
     LoginSerializer,
     RegisterSerializer,
-    VerifyEmailSerializer,
+    VerifyEmailSerializer, ExecutorSerializer,
+    ProfileSerializer,
+    ChangePasswordSerializer
 )
 
 User = get_user_model()
@@ -27,6 +30,19 @@ class RegisterView(generics.CreateAPIView):
 
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()  # RegisterSerializer.create создаёт пользователя
+
+        return Response(
+            {
+                "detail": "Пользователь создан. Проверьте почту и подтвердите email.",
+                "email": user.email,
+            },
+            status=201,
+        )
 
 
 class LoginView(generics.GenericAPIView):
@@ -57,6 +73,40 @@ class LoginView(generics.GenericAPIView):
                 "role": user.role,
             }
         )
+
+
+class ProfileView(generics.RetrieveUpdateAPIView):
+    """
+    GET /api/auth/profile/  — получить данные профиля
+    PUT/PATCH /api/auth/profile/ — обновить (аватар, ФИО, компания, должность, email)
+    """
+
+    serializer_class = ProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
+class ChangePasswordView(APIView):
+    """
+    POST /api/auth/change-password/
+    {
+    "current_password": "...",
+    "new_password": "..."
+    }
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": "Пароль успешно изменён."})
 
 
 class InvitationCreateView(generics.CreateAPIView):
@@ -98,3 +148,21 @@ def verify_email(request):
     result = ser.save()
     # Возвращаем результат
     return Response(result)
+
+
+class ExecutorListView(generics.ListAPIView):
+    """
+    GET /api/auth/executors/
+    Возвращает всех исполнителей, принадлежащих текущему Создателю.
+    """
+
+    serializer_class = ExecutorSerializer
+    permission_classes = [permissions.IsAuthenticated, IsCreator]
+
+    def get_queryset(self):
+        user = self.request.user  # это Создатель
+        # Простой критерий: все EXECUTORы из той же компании, что и создатель
+        return User.objects.filter(
+            role=User.Role.EXECUTOR,
+            company=user.company,
+        )
