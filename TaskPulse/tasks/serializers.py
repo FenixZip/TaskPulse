@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Task, TaskAttachment
+from .models import Task, TaskAttachment, TaskMessage
 
 User = get_user_model()
 
@@ -20,7 +20,7 @@ class TaskAttachmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaskAttachment
-        fields = ("id", "task", "file", "file_url", "uploaded_by", "created_at")
+        fields = ("id", "task", "file", "file_url", "kind", "uploaded_by", "created_at")
         # task задаётся, как правило, через URL или во view, а не руками из запроса
         read_only_fields = ("id", "uploaded_by", "created_at", "task")
 
@@ -49,6 +49,69 @@ class TaskAttachmentSerializer(serializers.ModelSerializer):
         return attachment
 
 
+class TaskMessageSerializer(serializers.ModelSerializer):
+    """Сообщение в чате по задаче."""
+
+    sender_name = serializers.SerializerMethodField(read_only=True)
+    is_from_creator = serializers.SerializerMethodField(read_only=True)
+    is_from_executor = serializers.SerializerMethodField(read_only=True)
+    file_url = serializers.SerializerMethodField(read_only=True)
+    task_title = serializers.CharField(source="task.title", read_only=True)
+
+    class Meta:
+        model = TaskMessage
+        fields = (
+            "id",
+            "task",
+            "task_title",
+            "sender",
+            "sender_name",
+            "text",
+            "file",
+            "file_url",
+            "is_from_creator",
+            "is_from_executor",
+            "created_at",
+        )
+        read_only_fields = (
+            "id",
+            "task",
+            "sender",
+            "sender_name",
+            "is_from_creator",
+            "is_from_executor",
+            "created_at",
+            "file_url",
+            "task_title",
+        )
+
+    def get_sender_name(self, obj: TaskMessage) -> str:
+        return obj.sender_name
+
+    def get_is_from_creator(self, obj: TaskMessage) -> bool:
+        return obj.is_from_creator
+
+    def get_is_from_executor(self, obj: TaskMessage) -> bool:
+        return obj.is_from_executor
+
+    def get_file_url(self, obj: TaskMessage) -> Optional[str]:
+        if not obj.file:
+            return None
+        request = self.context.get("request")
+        file_url = getattr(obj.file, "url", None)
+        if not file_url:
+            return None
+        return request.build_absolute_uri(file_url) if request else file_url
+
+    def create(self, validated_data):
+        """
+        task и sender будем передавать из view через .save(task=..., sender=...),
+        чтобы их нельзя было подменить из запроса.
+        """
+
+        return TaskMessage.objects.create(**validated_data)
+
+
 class TaskSerializer(serializers.ModelSerializer):
     """Сериализатор задачи для чтения.
     Отдаёт все ключевые поля задачи, а также связанные вложения.
@@ -61,42 +124,128 @@ class TaskSerializer(serializers.ModelSerializer):
     )
     status_display = serializers.CharField(source="get_status_display", read_only=True)
 
+    creator_name = serializers.CharField(read_only=True)
+    result_file = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Task
         fields = (
             "id",
             "title",
             "description",
+            "executor_comment",  # Добавил поле
             "priority",
             "priority_display",
             "status",
             "status_display",
             "due_at",
             "creator",
+            "creator_name",  # Добавил поле
             "assignee",
             "created_at",
             "updated_at",
             "attachments",
+            "result_file",  # <— добавили
         )
-        read_only_fields = ("id", "creator", "created_at", "updated_at")
+        read_only_fields = ("id", "creator", "creator_name", "created_at", "updated_at")
+
+    def get_result_file(self, obj: Task) -> Optional[str]:
+        return obj.last_result_file_url()
 
 
 class TaskUpsertSerializer(serializers.ModelSerializer):
     """Сериализатор задачи для создания и изменения."""
+    attachment = serializers.FileField(
+        write_only=True,
+        required=False,
+        allow_null=True,
+        help_text="Файл-вложение к задаче (от создателя).",
+    )
+
+    result_file = serializers.FileField(
+        write_only=True,
+        required=False,
+        allow_null=True,
+        help_text="Файл-результат выполнения задачи (от исполнителя).",
+    )
 
     class Meta:
         model = Task
-        fields = ("title", "description", "priority", "status", "due_at", "assignee")
+        fields = (
+            "title",
+            "description",
+            "executor_comment",  # Добавил поле
+            "priority",
+            "status",
+            "due_at",
+            "assignee",
+            "attachment",
+            "result_file",
+        )
 
     def create(self, validated_data: Dict[str, Any]) -> Task:
         """Создаёт задачу, проставляя создателя из текущего пользователя."""
 
+        from .models import TaskAttachment  # чтобы избежать циклов импорта
+
         request = self.context.get("request")
         assert request is not None, "Request must be provided in serializer context"
-
         user: User = request.user
+
+        attachment = validated_data.pop("attachment", None)
+        result_file = validated_data.pop("result_file", None)
+
         task = Task.objects.create(creator=user, **validated_data)
+
+        if attachment:
+            TaskAttachment.objects.create(
+                task=task,
+                file=attachment,
+                uploaded_by=user,
+                kind=TaskAttachment.Kind.GENERAL,
+            )
+
+        if result_file:
+            TaskAttachment.objects.create(
+                task=task,
+                file=result_file,
+                uploaded_by=user,
+                kind=TaskAttachment.Kind.RESULT,
+            )
+
         return task
+
+    def update(self, instance: Task, validated_data: Dict[str, Any]) -> Task:
+        """Частичное обновление задачи + возможные новые вложения."""
+
+        from .models import TaskAttachment
+
+        request = self.context.get("request")
+        assert request is not None, "Request must be provided in serializer context"
+        user: User = request.user
+
+        attachment = validated_data.pop("attachment", None)
+        result_file = validated_data.pop("result_file", None)
+
+        instance = super().update(instance, validated_data)
+
+        if attachment:
+            TaskAttachment.objects.create(
+                task=instance,
+                file=attachment,
+                uploaded_by=user,
+                kind=TaskAttachment.Kind.GENERAL,
+            )
+
+        if result_file:
+            TaskAttachment.objects.create(
+                task=instance,
+                file=result_file,
+                uploaded_by=user,
+                kind=TaskAttachment.Kind.RESULT,
+            )
+
+        return instance
 
 
 class TaskActionSerializer(serializers.Serializer):

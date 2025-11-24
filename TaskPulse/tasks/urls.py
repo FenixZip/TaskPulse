@@ -2,7 +2,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from .views import TaskViewSet
+from .views import TaskViewSet, ConversationMessagesView
 from .views_cabinet import (
     CreatorTasksView,
     CreatorStatsByAssigneeView,
@@ -36,4 +36,11 @@ urlpatterns = [
     # отчёт по задачам за месяц:
     #   name="reports-monthly" — именно его используют тесты через reverse()
     path("reports/monthly/", monthly_report, name="reports-monthly"),
+
+    # Сообщения
+    path(
+        "tasks/conversation-messages/",
+        ConversationMessagesView.as_view(),
+        name="task-conversation-messages",
+    )
 ]

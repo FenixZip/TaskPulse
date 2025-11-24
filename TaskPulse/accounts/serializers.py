@@ -66,6 +66,66 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
+class ProfileSerializer(serializers.ModelSerializer):
+    """Профиль текущего пользователя (создателя или исполнителя)."""
+
+    invited_by = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "role",
+            "avatar",
+            "full_name",
+            "company",
+            "position",
+            "email",
+            "invited_by",
+        )
+        read_only_fields = ("id", "role", "invited_by")
+
+    def get_invited_by(self, obj):
+        """
+        Для исполнителя вернём ФИО/почту того, кто его пригласил.
+        Для создателя будет None.
+        """
+
+        invite = (
+            Invitation.objects.filter(email=obj.email, accepted_at__isnull=False)
+            .select_related("invited_by")
+            .order_by("-accepted_at")
+            .first()
+        )
+
+        if invite and invite.invited_by:
+            return invite.invited_by.full_name or invite.invited_by.email
+        return None
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """Смена пароля в личном кабинете."""
+
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+
+    def validate_current_password(self, value):
+        user = self.context["request"].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Неверный текущий пароль.")
+        return value
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
+
+    def save(self, **kwargs):
+        user = self.context["request"].user
+        user.set_password(self.validated_data["new_password"])
+        user.save()
+        return user
+
+
 class InvitationCreateSerializer(serializers.ModelSerializer):
     """Сериализатор создания инвайта (только для CREATOR)."""
 
@@ -182,3 +242,9 @@ class VerifyEmailSerializer(serializers.Serializer):
         verification.mark_used()
 
         return {"email_verified": True}
+
+
+class ExecutorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "email", "full_name", "company", "position")

@@ -39,6 +39,8 @@ class User(AbstractUser):
     )
     email_verified = models.BooleanField(default=False)
 
+    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
+
     objects = UserManager()
 
     USERNAME_FIELD = "email"
