@@ -30,16 +30,34 @@ load_dotenv(BASE_DIR / "../.env")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
-print(DEBUG)
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
+raw_hosts = os.getenv("ALLOWED_HOSTS", "")
+ALLOWED_HOSTS = [h.strip() for h in raw_hosts.split(",") if h.strip()]
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY and not DEBUG:
     raise RuntimeError("SECRET_KEY не установлен")
 
+
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.mail.ru")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465"))
+
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "taskpulse@internet.ru")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "False").lower() in ("1", "true", "yes")
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "True").lower() in ("1", "true", "yes")
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    f"TaskPulse <{EMAIL_HOST_USER}>"
+)
+
 
 # Application definition
 
@@ -60,6 +78,11 @@ INSTALLED_APPS = [
     "tasks.apps.TasksConfig",
 ]
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
 AUTH_USER_MODEL = "accounts.User"
 
 REST_FRAMEWORK = {
@@ -78,15 +101,13 @@ REST_FRAMEWORK = {
 
 
 # === Celery ===
-
-# брокер — для реальной работы лучше Redis (это пример)
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 
 # В тестах / локально можно выполнять задачи синхронно,
 # чтобы не поднимать воркер Celery
-CELERY_TASK_ALWAYS_EAGER = True
-CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", "False").lower() in ("1", "true", "yes")
+CELERY_TASK_EAGER_PROPAGATES = os.getenv("CELERY_TASK_EAGER_PROPAGATES", "False").lower() in ("1", "true", "yes")
 
 # Периодическая задача напоминаний (раз в 15 минут)
 CELERY_BEAT_SCHEDULE = {
@@ -98,10 +119,6 @@ CELERY_BEAT_SCHEDULE = {
 
 
 # На время разработки письма будем выводить в консоль
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "no-reply@task-pulse.local"
-SERVER_EMAIL = "server@task-pulse.local"
-
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -204,7 +221,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

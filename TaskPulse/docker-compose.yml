@@ -1,0 +1,78 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:18
+    container_name: taskpulse_db
+    restart: always
+    environment:
+      POSTGRES_DB: taskpulse
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: your_db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - taskpulse_net
+
+  redis:
+    image: redis:8-alpine
+    container_name: taskpulse_redis
+    restart: always
+    networks:
+      - taskpulse_net
+
+  backend:
+    image: fenixzip/taskpulse-backend:latest
+    container_name: taskpulse_backend
+    restart: always
+    env_file:
+      - .env  # лежит в /opt/taskpulse/.env на сервере
+    depends_on:
+      - db
+      - redis
+    networks:
+      - taskpulse_net
+
+  worker:
+    image: fenixzip/taskpulse-backend:latest
+    container_name: taskpulse_worker
+    restart: always
+    env_file:
+      - .env
+    command: celery -A TaskPulse worker -l info
+    depends_on:
+      - db
+      - redis
+    networks:
+      - taskpulse_net
+
+  beat:
+    image: fenixzip/taskpulse-backend:latest
+    container_name: taskpulse_beat
+    restart: always
+    env_file:
+      - .env
+    command: celery -A TaskPulse beat -l info
+    depends_on:
+      - db
+      - redis
+    networks:
+      - taskpulse_net
+
+  frontend:
+    image: fenixzip/taskpulse-frontend:latest
+    container_name: taskpulse_frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - taskpulse_net
+
+volumes:
+  postgres_data:
+
+networks:
+  taskpulse_net:
+    driver: bridge

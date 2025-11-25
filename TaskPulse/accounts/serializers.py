@@ -1,5 +1,7 @@
 """accounts/serializers.py"""
-
+from django.utils.encoding import force_str
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
@@ -7,6 +9,9 @@ from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 
 from .models import EmailVerificationToken, Invitation
+from django.utils import timezone
+from datetime import timedelta
+from .utils import send_verification_email, send_invite_email, send_password_reset_email
 
 User = get_user_model()
 
@@ -57,10 +62,15 @@ class LoginSerializer(serializers.Serializer):
         user = authenticate(request=request, email=email, password=password)
 
         if not user:
-            raise serializers.ValidationError({"detail": self.error_messages["invalid_credentials"]})
+            raise serializers.ValidationError(
+                {"detail": self.error_messages["invalid_credentials"]}
+            )
 
+        # Требуем подтверждённый email
         if not getattr(user, "email_verified", False):
-            raise serializers.ValidationError(self.error_messages["email_not_verified"])
+            raise serializers.ValidationError(
+                {"detail": self.error_messages["email_not_verified"]}
+            )
 
         attrs["user"] = user
         return attrs
@@ -129,18 +139,47 @@ class ChangePasswordSerializer(serializers.Serializer):
 class InvitationCreateSerializer(serializers.ModelSerializer):
     """Сериализатор создания инвайта (только для CREATOR)."""
 
+    email = serializers.EmailField()
+
     class Meta:
         model = Invitation
         fields = ("email",)
 
+    def validate_email(self, value: str) -> str:
+        """
+        Нормализуем email и не даём приглашать самого себя.
+        """
+        request = self.context["request"]
+        email = value.strip().lower()
+
+        if request.user.email.lower() == email:
+            raise serializers.ValidationError("Нельзя отправить приглашение на свой же email.")
+
+        return email
+
     def create(self, validated_data):
-        """Создаёт Invitation от имени текущего аутентифицированного пользователя."""
+        """
+        Создаёт Invitation от имени текущего аутентифицированного пользователя
+        и отправляет письмо-приглашение.
+        """
 
         request = self.context["request"]
+        email = validated_data["email"]
+
+        # По-хорошему можно добавить простой антиспам:
+        # не чаще N инвайтов на один email от одного создателя за период.
+        # Здесь оставляем минималистично – всегда создаём новый инвайт.
         invitation = Invitation.objects.create(
             invited_by=request.user,
-            **validated_data,
+            email=email,
         )
+
+        # У модели Invitation уже есть token (используется в AcceptInviteSerializer)
+        invite_token = str(invitation.token)
+
+        # Отправляем красивое HTML-письмо
+        send_invite_email(invitation, invite_token)
+
         return invitation
 
 
@@ -244,7 +283,134 @@ class VerifyEmailSerializer(serializers.Serializer):
         return {"email_verified": True}
 
 
+class ResendVerificationSerializer(serializers.Serializer):
+    """Повторная отправка письма для подтверждения email."""
+
+    email = serializers.EmailField()
+
+    default_error_messages = {
+        "too_many_requests": "Письмо уже отправлено недавно. Попробуйте позже.",
+    }
+
+    def validate_email(self, value: str) -> str:
+        # Нормализуем email (например, приводим к нижнему регистру)
+        return value.strip().lower()
+
+    def create(self, validated_data):
+        User = get_user_model()
+        email = validated_data["email"]
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Не палим, есть ли такой пользователь
+            return {
+                "detail": (
+                    "Если пользователь существует и его почта не подтверждена, "
+                    "мы отправили письмо."
+                )
+            }
+
+        if getattr(user, "email_verified", False):
+            return {"detail": "Эта почта уже подтверждена."}
+
+        # Антиспам: не чаще одного письма раз в 5 минут
+        last_token = (
+            EmailVerificationToken.objects.filter(user=user)
+            .order_by("-created_at")
+            .first()
+        )
+        if last_token and timezone.now() - last_token.created_at < timedelta(minutes=5):
+            raise serializers.ValidationError(
+                {"detail": self.error_messages["too_many_requests"]}
+            )
+
+        # Генерируем новый токен и отправляем HTML-письмо
+        token = EmailVerificationToken.issue_for(user)
+        send_verification_email(user, token)
+
+        return {"detail": "Письмо для подтверждения отправлено, проверьте почту."}
+
+
 class ExecutorSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("id", "email", "full_name", "company", "position")
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """
+    Подтверждение сброса пароля.
+
+    Принимает:
+      - reset_token: строка вида "uidb64:token"
+      - new_password
+      - new_password_confirm
+
+    Используется, например, в:
+      POST /api/auth/password-reset-confirm/
+    """
+
+    reset_token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    new_password_confirm = serializers.CharField(write_only=True, min_length=8)
+
+    default_error_messages = {
+        "invalid_token": "Ссылка для сброса пароля недействительна или устарела.",
+        "password_mismatch": "Пароли не совпадают.",
+    }
+
+    def validate(self, attrs):
+        reset_token = attrs.get("reset_token")
+        new_password = attrs.get("new_password")
+        new_password_confirm = attrs.get("new_password_confirm")
+
+        # 1) Проверяем, что пароли совпадают
+        if new_password != new_password_confirm:
+            raise serializers.ValidationError(
+                {"new_password_confirm": self.error_messages["password_mismatch"]}
+            )
+
+        # 2) Разбираем reset_token вида "uidb64:token"
+        try:
+            uidb64, token = reset_token.split(":", 1)
+        except ValueError:
+            raise serializers.ValidationError(
+                {"reset_token": self.error_messages["invalid_token"]}
+            )
+
+        # 3) Декодируем uid и находим пользователя
+        User = get_user_model()
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            raise serializers.ValidationError(
+                {"reset_token": self.error_messages["invalid_token"]}
+            )
+
+        # 4) Проверяем токен
+        token_generator = PasswordResetTokenGenerator()
+        if not token_generator.check_token(user, token):
+            raise serializers.ValidationError(
+                {"reset_token": self.error_messages["invalid_token"]}
+            )
+
+        # 5) Проверяем пароль через стандартные валидаторы Django
+        validate_password(new_password, user=user)
+
+        # Пробрасываем пользователя дальше в create()
+        attrs["user"] = user
+        return attrs
+
+    def create(self, validated_data):
+        """
+        Меняем пароль пользователю.
+        """
+        user = validated_data["user"]
+        new_password = validated_data["new_password"]
+
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+
+        return {"detail": "Пароль успешно изменён."}

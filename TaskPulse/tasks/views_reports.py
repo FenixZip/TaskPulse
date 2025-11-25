@@ -1,10 +1,8 @@
 """tasks/views_reports.py"""
 
 import csv
-from typing import Dict, Any, List
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q, F
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
@@ -12,17 +10,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer, BrowsableAPIRenderer, BaseRenderer
 from rest_framework.response import Response
 
-from .models import Task
+from .services.kpi import calc_user_month_kpi
+
 
 User = get_user_model()
 
 
 class CSVRenderer(BaseRenderer):
     """
-    Простейший рендерер, чтобы DRF не падал на ?format=csv.
-    Мы возвращаем HttpResponse сами, поэтому сюда выполнение
-    фактически не доходит, но наличие рендерера делает формат `csv`
-    "разрешённым" для DRF.
+    Простейший рендерер, который говорит DRF, что формат `csv` существует.
+    Фактическую генерацию CSV делаем вручную через HttpResponse.
     """
 
     media_type = "text/csv"
@@ -40,7 +37,6 @@ class CSVRenderer(BaseRenderer):
 
 def _parse_month(month_str: str):
     """Разбирает строку YYYY-MM в (year, month_int) или возвращает (None, None) при ошибке."""
-
     if not month_str:
         return None, None
     try:
@@ -55,19 +51,18 @@ def _parse_month(month_str: str):
 
 
 @api_view(["GET"])
-@renderer_classes([JSONRenderer, CSVRenderer, BrowsableAPIRenderer])
 @permission_classes([IsAuthenticated])
+@renderer_classes([JSONRenderer, BrowsableAPIRenderer, CSVRenderer])
 def monthly_report(request):
     """
-    Ежемесячный отчёт по задачам сотрудника.
-    Ограничения:
-    - доступ только для пользователей с ролью CREATOR;
-    - user=me или user={id сотрудника};
-    - month в формате YYYY-MM;
+    Отчёт по задачам исполнителя за месяц.
+
+    Параметры:
+    - ?user=me (по умолчанию) или ?user=<id>;
+    - ?month=YYYY-MM (обязателен);
     - ?format=json (по умолчанию) или ?format=csv.
     """
 
-    # --- 1. Проверяем роль пользователя ---
     current_user = request.user
     if getattr(current_user, "role", None) != "CREATOR":
         return Response(
@@ -75,8 +70,7 @@ def monthly_report(request):
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    # --- 2. Разбор параметров ---
-    user_param = request.query_params.get("user")
+    user_param = request.query_params.get("user", "me")
     month_str = request.query_params.get("month")
     fmt = request.query_params.get("format", "json").lower()
 
@@ -93,97 +87,49 @@ def monthly_report(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # --- 3. Определяем сотрудника, по которому строим отчёт ---
-    if user_param in ("me", None):
+    if user_param == "me":
         target_user = current_user
     else:
         try:
-            target_id = int(user_param)
-        except (TypeError, ValueError):
-            return Response(
-                {"detail": "Параметр user должен быть 'me' или числовым id пользователя."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        try:
-            target_user = User.objects.get(id=target_id)
+            target_user = User.objects.get(pk=user_param)
         except User.DoesNotExist:
             return Response(
-                {"detail": "Пользователь с таким id не найден."},
+                {"detail": "Пользователь не найден."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-    # --- 4. Базовый queryset задач ---
-    qs = Task.objects.filter(
-        assignee=target_user,
-        due_at__year=year,
-        due_at__month=month,
-    )
+    # --- KPI считаем через сервисный слой ---
+    data = calc_user_month_kpi(target_user, year, month)
 
-    # --- 5. KPI по задачам ---
-    total = qs.count()
-
-    done_qs = qs.filter(status=Task.Status.DONE)
-    done = done_qs.count()
-
-    # В срок: DONE и (due_at IS NULL или updated_at <= due_at)
-    done_on_time = done_qs.filter(
-        Q(due_at__isnull=True) | Q(updated_at__lte=F("due_at"))
-    ).count()
-
-    # С опозданием: DONE и updated_at > due_at (и due_at не NULL)
-    done_late = done_qs.filter(
-        Q(due_at__isnull=False) & Q(updated_at__gt=F("due_at"))
-    ).count()
-
-    # --- 6. KPI по приоритетам ---
-    by_priority_list: List[Dict[str, Any]] = []
-    for priority_value, _priority_label in Task.Priority.choices:
-        prio_qs = qs.filter(priority=priority_value)
-        prio_done_qs = prio_qs.filter(status=Task.Status.DONE)
-
-        prio_total = prio_qs.count()
-        prio_done = prio_done_qs.count()
-        prio_done_on_time = prio_done_qs.filter(
-            Q(due_at__isnull=True) | Q(updated_at__lte=F("due_at"))
-        ).count()
-        prio_done_late = prio_done_qs.filter(
-            Q(due_at__isnull=False) & Q(updated_at__gt=F("due_at"))
-        ).count()
-
-        by_priority_list.append(
-            {
-                "priority": priority_value,
-                "total": prio_total,
-                "done": prio_done,
-                "done_on_time": prio_done_on_time,
-                "done_late": prio_done_late,
-            }
-        )
-
-    # --- 7. CSV-экспорт ---
     if fmt == "csv":
+        # CSV-ответ
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = (
-            f'attachment; filename="monthly_report_{month_str}_{target_user.id}.csv"'
-        )
+        filename = f"monthly_report_{data['user_id']}_{data['month']}.csv"
+        response["Content-Disposition"] = f'attachment; filename=\"{filename}\"'
 
         writer = csv.writer(response)
-        writer.writerow(
-            ["user_id", "month", "total", "done", "done_on_time", "done_late"]
-        )
-        writer.writerow(
-            [target_user.id, month_str, total, done, done_on_time, done_late]
-        )
+        writer.writerow(["user_id", "month", "total", "done", "done_on_time", "done_late"])
+        writer.writerow([
+            data["user_id"],
+            data["month"],
+            data["total"],
+            data["done"],
+            data["done_on_time"],
+            data["done_late"],
+        ])
+
+        writer.writerow([])
+        writer.writerow(["priority", "total", "done", "done_on_time", "done_late"])
+        for item in data["by_priority"]:
+            writer.writerow([
+                item["priority"],
+                item["total"],
+                item["done"],
+                item["done_on_time"],
+                item["done_late"],
+            ])
+
         return response
 
-    # --- 8. JSON-ответ ---
-    data = {
-        "user_id": target_user.id,
-        "month": month_str,
-        "total": total,
-        "done": done,
-        "done_on_time": done_on_time,
-        "done_late": done_late,
-        "by_priority": by_priority_list,
-    }
+    # JSON-ответ
     return Response(data, status=status.HTTP_200_OK)

@@ -15,7 +15,8 @@ from .serializers import (
     RegisterSerializer,
     VerifyEmailSerializer, ExecutorSerializer,
     ProfileSerializer,
-    ChangePasswordSerializer
+    ChangePasswordSerializer,
+    ResendVerificationSerializer, PasswordResetConfirmSerializer,
 )
 
 User = get_user_model()
@@ -34,7 +35,7 @@ class RegisterView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()  # RegisterSerializer.create создаёт пользователя
+        user = serializer.save()
 
         return Response(
             {
@@ -74,6 +75,19 @@ class LoginView(generics.GenericAPIView):
             }
         )
 
+
+class PasswordResetConfirmView(generics.CreateAPIView):
+    """
+    POST /api/auth/password-reset-confirm/
+    {
+      "reset_token": "<uidb64:token>",
+      "new_password": "...",
+      "new_password_confirm": "..."
+    }
+    """
+
+    serializer_class = PasswordResetConfirmSerializer
+    permission_classes = [permissions.AllowAny]
 
 class ProfileView(generics.RetrieveUpdateAPIView):
     """
@@ -166,3 +180,13 @@ class ExecutorListView(generics.ListAPIView):
             role=User.Role.EXECUTOR,
             company=user.company,
         )
+
+
+class ResendVerificationView(generics.CreateAPIView):
+    """
+    POST /api/auth/resend-verification
+    Принимает email, повторно отправляет письмо подтверждения.
+    """
+
+    serializer_class = ResendVerificationSerializer
+    permission_classes = [permissions.AllowAny]
