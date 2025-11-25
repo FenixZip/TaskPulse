@@ -1,5 +1,6 @@
 npm run dev
 python manage.py shell
+docker compose up -d --build
 
 
 
