@@ -9,7 +9,8 @@ from .views import (
     RegisterView,
     verify_email, ExecutorListView,
     ProfileView,
-    ChangePasswordView
+    ChangePasswordView,
+    ResendVerificationView, PasswordResetConfirmView,
 )
 
 app_name = "accounts"
@@ -25,6 +26,18 @@ urlpatterns = [
     path("accept-invite/", AcceptInviteView.as_view(), name="auth-accept-invite"),
     # GET /api/auth/verify-email/?token=...
     path("verify-email/", verify_email, name="auth-verify-email"),
+    path(
+        "resend-verification/",
+        ResendVerificationView.as_view(),
+        name="auth-resend-verification",
+    ),
+
+path(
+    "password-reset-confirm/",
+    PasswordResetConfirmView.as_view(),
+    name="auth-password-reset-confirm",
+    ),
+
     path("executors/", ExecutorListView.as_view(), name="executor-list"),
 
     # Личный кабинет
