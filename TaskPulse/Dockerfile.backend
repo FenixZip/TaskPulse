@@ -1,6 +1,6 @@
 # backend/Dockerfile.backend
 FROM python:3.13.7
-
+"""
 # Внутри контейнера
 WORKDIR /app
 
