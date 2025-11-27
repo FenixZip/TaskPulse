@@ -15,39 +15,21 @@ def notify_task_assigned(task):
         return
 
     link = build_task_link(task.id)
+    text_lines = [
+        "📌 Вам назначена новая задача",
+        f"Название: {task.title}",
+    ]
+    if task.due_at:
+        text_lines.append(f"Дедлайн: {task.due_at}")
+    text_lines.append(f"Подробнее: {link}")
 
-    text = (
-        f"<b>{task.title}</b>\n\n"
-        f"Открыть задачу: {link}"
-    )
+    text = "\n".join(text_lines)
 
-    reply_markup = {
-        "inline_keyboard": [
-            [
-                {
-                    "text": "⏰ Продлить на сутки",
-                    "callback_data": f"extend_1d:{task.id}",
-                },
-                {
-                    "text": "✅ Сделаю вовремя",
-                    "callback_data": f"confirm_on_time:{task.id}",
-                },
-            ]
-        ]
-    }
-
-    send_telegram_message(profile.chat_id, text, reply_markup=reply_markup)
+    send_telegram_message(profile.chat_id, text)
 
 
 def notify_task_due_soon(task):
-    """
-    Отправляет напоминание за ~24 часа до дедлайна.
-    Формат:
-    - заголовок задачи,
-    - текст о том, что срок подходит,
-    - ссылка на задачу,
-    - те же inline-кнопки: «Продлить на сутки» и «Сделаю вовремя».
-    """
+    """Напоминание исполнителю, что дедлайн скоро (например, ~24 часа)."""
 
     if task.assignee_id is None:
         return
@@ -58,28 +40,15 @@ def notify_task_due_soon(task):
         return
 
     link = build_task_link(task.id)
+    text_lines = [
+        "⏰ Напоминание о задаче",
+        f"Название: {task.title}",
+    ]
+    if task.due_at:
+        text_lines.append(f"Дедлайн: {task.due_at}")
+    text_lines.append(f"Подробнее: {link}")
 
-    text = (
-        f"⏰ Напоминание о задаче:\n"
-        f"<b>{task.title}</b>\n\n"
-        f"Дедлайн скоро наступит. Пожалуйста, подтвердите, что успеете,\n"
-        f"или продлите срок, если нужно.\n\n"
-        f"Открыть задачу: {link}"
-    )
+    text = "\n".join(text_lines)
 
-    reply_markup = {
-        "inline_keyboard": [
-            [
-                {
-                    "text": "⏰ Продлить на сутки",
-                    "callback_data": f"extend_1d:{task.id}",
-                },
-                {
-                    "text": "✅ Сделаю вовремя",
-                    "callback_data": f"confirm_on_time:{task.id}",
-                },
-            ]
-        ]
-    }
-
-    send_telegram_message(profile.chat_id, text, reply_markup=reply_markup)
+    # при желании можно добавить inline-кнопки (см. пример внизу файла)
+    send_telegram_message(profile.chat_id, text)

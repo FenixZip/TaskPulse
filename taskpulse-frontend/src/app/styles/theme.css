@@ -1,0 +1,18 @@
+/* src/app/styles/theme.css */
+
+:root {
+  --bg: #020617;
+  --bg-elevated: #020617;
+  --bg-header: #020617;
+  --bg-footer: #020617;
+
+  --border-subtle: #111827;
+
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+
+  --accent: #14b8a6; /* под цвет логотипа */
+  --accent-hover: #0d9488;
+
+  --radius-lg: 16px;
+}

@@ -14,6 +14,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from integrations.telegram_api import telegram_connect_start
+from integrations.telegram_webhook import telegram_webhook
 
 """Корневой URL-конфиг проекта TaskPulse."""
 
@@ -32,7 +34,12 @@ urlpatterns = [
     # Задачи и отчёты (tasks + reports/monthly)
     path("api/", include("tasks.urls")),
     # Интеграции (Telegram: webhook + API-профиль)
-    path("api/", include("integrations.urls")),
+    path("api/integrations/telegram/connect/", telegram_connect_start, name="telegram-connect-start"),
+    path(
+        f"api/integrations/telegram/webhook/<str:secret>/",
+        telegram_webhook,
+        name="telegram-webhook",
+    ),
 ]
 
 # В dev-режиме раздаём медиа-файлы через Django
