@@ -10,7 +10,7 @@ from .views import (
     verify_email, ExecutorListView,
     ProfileView,
     ChangePasswordView,
-    ResendVerificationView, PasswordResetConfirmView,
+    ResendVerificationView, PasswordResetConfirmView, PasswordResetRequestView,
 )
 
 app_name = "accounts"
@@ -20,6 +20,8 @@ urlpatterns = [
     path("register/", RegisterView.as_view(), name="auth-register"),
     # POST /api/auth/login/
     path("login/", LoginView.as_view(), name="auth-login"),
+    path("password-reset/", PasswordResetRequestView.as_view(), name="auth-password-reset"),
+    path("password-reset-confirm/", PasswordResetConfirmView.as_view(), name="auth-password-reset-confirm"),
     # POST /api/auth/invitations/
     path("invitations/", InvitationCreateView.as_view(), name="invitation-create"),
     # POST /api/auth/accept-invite/
@@ -30,12 +32,6 @@ urlpatterns = [
         "resend-verification/",
         ResendVerificationView.as_view(),
         name="auth-resend-verification",
-    ),
-
-path(
-    "password-reset-confirm/",
-    PasswordResetConfirmView.as_view(),
-    name="auth-password-reset-confirm",
     ),
 
     path("executors/", ExecutorListView.as_view(), name="executor-list"),

@@ -15,7 +15,7 @@ const defaultState: AuthState = {
   user: null,
 };
 
-export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -24,17 +24,21 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [auth, setAuth] = useState<AuthState>(() => {
     if (typeof window === "undefined") return defaultState;
+
     try {
       const raw = localStorage.getItem(AUTH_STORAGE_KEY);
       if (!raw) return defaultState;
       const parsed = JSON.parse(raw) as AuthState;
-      return parsed;
+      return parsed || defaultState;
     } catch {
       return defaultState;
     }
   });
 
+  // только localStorage, никакого setState здесь → цикла не будет
   useEffect(() => {
+    if (!window) return;
+
     if (auth.token) {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
     } else {

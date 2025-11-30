@@ -1,24 +1,23 @@
-// src/app/guards/RequireTelegram.tsx
-import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useTelegramProfile } from "../../shared/hooks/useTelegramProfile";
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../../shared/hooks/useAuth";
+import { ROUTES } from "../../shared/config/routes";
 
 export const RequireTelegram = () => {
-  const { data, isLoading, isError } = useTelegramProfile();
-  const location = useLocation();
+  const { auth } = useAuth();
 
-  if (isLoading) {
-    return <div className="tasks-empty">Проверяем подключение Telegram…</div>;
+  if (!auth?.user) {
+    return <Navigate to={ROUTES.login} replace />;
   }
 
-  // если телеграм не привязан — отправляем в личный кабинет
-  if (!data || isError) {
-    return (
-      <Navigate
-        to="/app/profile"
-        replace
-        state={{ from: location }}
-      />
-    );
+  // предполагаю, что в user есть флаг/поле типа telegram_connected
+  const tgOk =
+    (auth.user as any).telegram_connected ??
+    (auth.user as any).telegram_id ??
+    false;
+
+  if (!tgOk) {
+    // нет телеграма → отправляем в профиль привязать
+    return <Navigate to="/app/profile" replace />;
   }
 
   return <Outlet />;

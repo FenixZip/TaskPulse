@@ -152,6 +152,24 @@ class TaskSerializer(serializers.ModelSerializer):
     def get_result_file(self, obj: Task) -> Optional[str]:
         return obj.last_result_file_url()
 
+    def validate(self, attrs):
+        assignee = attrs.get("assignee") or getattr(self.instance, "assignee", None)
+
+        if assignee is not None:
+            try:
+                profile = assignee.telegram_profile
+            except TelegramProfile.DoesNotExist:
+                raise serializers.ValidationError(
+                    {"assignee": "У исполнителя нет подключённого Telegram."}
+                )
+
+            if hasattr(profile, "is_confirmed") and not profile.is_confirmed:
+                raise serializers.ValidationError(
+                    {"assignee": "Telegram у исполнителя не подтверждён."}
+                )
+
+        return attrs
+
 
 class TaskUpsertSerializer(serializers.ModelSerializer):
     """Сериализатор задачи для создания и изменения."""

@@ -1,59 +1,101 @@
 // src/app/router.tsx
 import { Routes, Route } from "react-router-dom";
+
 import { RootLayout } from "./layouts/RootLayout";
 import { DashboardLayout } from "./layouts/DashboardLayout";
-import { ROUTES } from "../shared/config/routes";
-
-import { LandingPage } from "../pages/landing/LandingPage";
-import { LoginPage } from "../pages/auth/LoginPage";
-import { RegisterPage } from "../pages/auth/RegisterPage";
 
 import { RequireAuth } from "./guards/RequireAuth";
 import { RequireRole } from "./guards/RequireRole";
 import { RequireTelegram } from "./guards/RequireTelegram";
 
-import { CreatorTasksPage } from "../pages/dashboard/creator/CreatorTasksPage";
-import { ExecutorTasksPage } from "../pages/dashboard/executor/ExecutorTasksPage";
-import { AppRootRedirect } from "../pages/dashboard/AppRootRedirect";
+import { LandingPage } from "../pages/landing/LandingPage";
+import { LoginPage } from "../pages/auth/LoginPage";
+import { RegisterPage } from "../pages/auth/RegisterPage";
+import { ResetPasswordRequestPage } from "../pages/auth/ResetPasswordRequestPage";
+
 import { ProfilePage } from "../pages/profile/ProfilePage";
+
+import { CreatorDashboardPage } from "../pages/dashboard/creator/CreatorDashboardPage";
+import { CreatorTasksPage } from "../pages/dashboard/creator/CreatorTasksPage";
+import { CreatorTaskDetailsPage } from "../pages/dashboard/creator/CreatorTaskDetailsPage";
+import { ExecutorsPage } from "../pages/dashboard/creator/ExecutorsPage";
+import { ReportsPage } from "../pages/dashboard/creator/ReportsPage";
+
+import { ExecutorDashboardPage } from "../pages/dashboard/executor/ExecutorDashboardPage";
+import { ExecutorTasksPage } from "../pages/dashboard/executor/ExecutorTasksPage";
+import { ExecutorTaskDetailsPage } from "../pages/dashboard/executor/ExecutorTaskDetailsPage";
+
+import { ConversationPage } from "../pages/chat/ConversationPage";
+import { ErrorPage } from "../pages/error/ErrorPage";
+import { NotFoundPage } from "../pages/error/NotFoundPage";
+import { DashboardHomePage } from "../pages/dashboard/DashboardHomePage";
 
 export const AppRouter = () => {
   return (
     <Routes>
-      {/* Общий layout с шапкой/футером */}
-      <Route path={ROUTES.landing} element={<RootLayout />}>
-        {/* главная */}
+      {/* общий layout */}
+      <Route path="/" element={<RootLayout />}>
+        {/* лендинг */}
         <Route index element={<LandingPage />} />
 
-        {/* auth */}
-        <Route path="auth/login" element={<LoginPage />} />
-        <Route path="auth/register" element={<RegisterPage />} />
+        {/* AUTH-блок */}
+        <Route path="auth">
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
+          <Route path="reset-password" element={<ResetPasswordRequestPage />} />
+        </Route>
 
-        {/* приватная зона приложения */}
-        <Route path="app" element={<RequireAuth />}>
-          <Route element={<DashboardLayout />}>
-            {/* /app -> редирект по роли */}
-            <Route index element={<AppRootRedirect />} />
+        {/* всё, что ниже, защищаем RequireAuth */}
+        <Route element={<RequireAuth />}>
+          {/* приватная зона /app с dashboard-лейаутом */}
+          <Route path="app" element={<DashboardLayout />}>
+            {/* /app — просто домашняя страница дашборда, БЕЗ Navigate */}
+            <Route index element={<DashboardHomePage />} />
 
-            {/* личный кабинет всегда доступен */}
+            {/* профиль доступен всем авторизованным */}
             <Route path="profile" element={<ProfilePage />} />
 
-            {/* всё, что связано с задачами, требует подтверждённый Telegram */}
-            <Route element={<RequireTelegram />}>
-              <Route element={<RequireRole allowed={["creator"]} />}>
-                <Route path="creator/tasks" element={<CreatorTasksPage />} />
-              </Route>
+            {/* блок создателя */}
+            <Route element={<RequireRole allowed={["creator"]} />}>
+              <Route
+                path="creator/dashboard"
+                element={<CreatorDashboardPage />}
+              />
+              <Route path="creator/tasks" element={<CreatorTasksPage />} />
+              <Route
+                path="creator/tasks/:taskId"
+                element={<CreatorTaskDetailsPage />}
+              />
+              <Route path="creator/executors" element={<ExecutorsPage />} />
+              <Route path="creator/reports" element={<ReportsPage />} />
+            </Route>
 
-              <Route element={<RequireRole allowed={["executor"]} />}>
-                <Route path="executor/tasks" element={<ExecutorTasksPage />} />
-              </Route>
+            {/* блок исполнителя */}
+            <Route element={<RequireRole allowed={["executor"]} />}>
+              <Route
+                path="executor/dashboard"
+                element={<ExecutorDashboardPage />}
+              />
+              <Route path="executor/tasks" element={<ExecutorTasksPage />} />
+              <Route
+                path="executor/tasks/:taskId"
+                element={<ExecutorTaskDetailsPage />}
+              />
+            </Route>
+
+            {/* чат — только при привязанном Telegram */}
+            <Route element={<RequireTelegram />}>
+              <Route path="chat/:userId" element={<ConversationPage />} />
             </Route>
           </Route>
         </Route>
-      </Route>
 
-      {/* 404 */}
-      <Route path="*" element={<div>Страница не найдена</div>} />
+        {/* страница ошибки */}
+        <Route path="error" element={<ErrorPage />} />
+
+        {/* 404 */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
     </Routes>
   );
 };

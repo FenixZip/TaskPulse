@@ -1,10 +1,13 @@
 // src/features/tasks/list/ui/TasksList.tsx
+import { useNavigate } from "react-router-dom";
 import { useTasks } from "../model/useTasks";
 import { useUpdateTaskStatus } from "../../actions/model/useUpdateTaskStatus";
 import type { Task } from "../../../../entities/task/model/types";
 import { Button } from "../../../../shared/ui/Button";
 
 interface TasksListProps {
+  // creator – задачи, которые создатель поставил исполнителям
+  // executor – задачи, которые назначили этому исполнителю
   mode: "creator" | "executor";
 }
 
@@ -41,6 +44,8 @@ const renderStatusLabel = (task: Task) => {
     ? "Выполнена"
     : task.status === "in_progress"
     ? "В работе"
+    : task.status === "overdue"
+    ? "Просрочена"
     : "Новая";
 
   const cls =
@@ -48,12 +53,15 @@ const renderStatusLabel = (task: Task) => {
       ? "task-status-done"
       : task.status === "in_progress"
       ? "task-status-in-progress"
+      : task.status === "overdue"
+      ? "task-status-overdue"
       : "task-status-new";
 
   return <span className={`task-status-value ${cls}`}>{base}</span>;
 };
 
 export const TasksList = ({ mode }: TasksListProps) => {
+  const navigate = useNavigate();
   const { data: tasks, isLoading, isError } = useTasks();
   const updateStatusMutation = useUpdateTaskStatus();
 
@@ -61,8 +69,15 @@ export const TasksList = ({ mode }: TasksListProps) => {
     updateStatusMutation.mutate({ taskId, status: "done" });
   };
 
+  const handleOpenChat = (task: Task) => {
+    const peerId = mode === "creator" ? task.assignee : task.creator;
+    if (!peerId) return;
+    // чат с «другой стороной» задачи
+    navigate(`/app/chat/${peerId}`);
+  };
+
   if (isLoading) {
-    return <div className="tasks-empty">Загружаем задачи...</div>;
+    return <div className="tasks-empty">Загружаем задачи…</div>;
   }
 
   if (isError) {
@@ -70,7 +85,11 @@ export const TasksList = ({ mode }: TasksListProps) => {
   }
 
   if (!tasks || tasks.length === 0) {
-    return <div className="tasks-empty">Задач нет.</div>;
+    return (
+      <div className="tasks-empty">
+        Задач пока нет — самое время поставить первую.
+      </div>
+    );
   }
 
   return (
@@ -87,9 +106,12 @@ export const TasksList = ({ mode }: TasksListProps) => {
           const personPosition =
             mode === "creator" ? task.assignee_position : task.creator_position;
 
+          const peerId = mode === "creator" ? task.assignee : task.creator;
+
           return (
             <div key={task.id} className="task-card">
               <div className="task-card-header">
+                {/* Имя + должность */}
                 <div className="task-person">
                   {mode === "creator" ? "Исполнитель: " : "Создатель: "}
                   <strong>{personLabel}</strong>
@@ -97,6 +119,7 @@ export const TasksList = ({ mode }: TasksListProps) => {
                 </div>
 
                 <div className="task-card-title">{task.title}</div>
+
                 {task.description && (
                   <div className="task-card-description">{task.description}</div>
                 )}
@@ -111,19 +134,33 @@ export const TasksList = ({ mode }: TasksListProps) => {
 
               <div className="task-status-row">
                 <div>
-                  <div className="task-status-label">Результат:</div>
+                  <div className="task-status-label">Статус:</div>
                   {renderStatusLabel(task)}
                 </div>
 
-                {mode === "executor" && !isDone && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleMarkDone(task.id)}
-                    loading={updateStatusMutation.isPending}
-                  >
-                    Отметить выполненной
-                  </Button>
-                )}
+                <div className="task-actions flex gap-2">
+                  {/* Кнопка «Уточнить детали» → чат */}
+                  {peerId && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => handleOpenChat(task)}
+                    >
+                      Уточнить детали
+                    </Button>
+                  )}
+
+                  {/* Для исполнителя — отметить выполненной */}
+                  {mode === "executor" && !isDone && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleMarkDone(task.id)}
+                      loading={updateStatusMutation.isPending}
+                    >
+                      Отметить выполненной
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           );

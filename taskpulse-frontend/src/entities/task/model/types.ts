@@ -1,7 +1,7 @@
 // src/entities/task/model/types.ts
 
 export type TaskPriority = "low" | "medium" | "high";
-export type TaskStatus = "new" | "in_progress" | "done";
+export type TaskStatus = "new" | "in_progress" | "done" | "overdue";
 
 export interface Task {
   id: number;

@@ -16,7 +16,7 @@ from .serializers import (
     VerifyEmailSerializer, ExecutorSerializer,
     ProfileSerializer,
     ChangePasswordSerializer,
-    ResendVerificationSerializer, PasswordResetConfirmSerializer,
+    ResendVerificationSerializer, PasswordResetConfirmSerializer, PasswordResetRequestSerializer,
 )
 
 User = get_user_model()
@@ -89,6 +89,7 @@ class PasswordResetConfirmView(generics.CreateAPIView):
     serializer_class = PasswordResetConfirmSerializer
     permission_classes = [permissions.AllowAny]
 
+
 class ProfileView(generics.RetrieveUpdateAPIView):
     """
     GET /api/auth/profile/  — получить данные профиля
@@ -100,6 +101,18 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class PasswordResetRequestView(generics.CreateAPIView):
+    """
+    POST /api/auth/password-reset/
+    {
+      "email": "user@example.com"
+    }
+    """
+
+    serializer_class = PasswordResetRequestSerializer
+    permission_classes = [permissions.AllowAny]
 
 
 class ChangePasswordView(APIView):

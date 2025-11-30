@@ -7,12 +7,12 @@ export const RequireAuth = () => {
   const { auth } = useAuth();
   const location = useLocation();
 
-  if (!auth.token) {
+  if (!auth?.token) {
     return (
       <Navigate
         to={ROUTES.login}
-        replace
         state={{ from: location }}
+        replace
       />
     );
   }

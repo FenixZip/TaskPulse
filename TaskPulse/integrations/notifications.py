@@ -12,4 +12,7 @@ def send_telegram_message(chat_id: int, text: str) -> None:
         "parse_mode": "HTML",
     }
     resp = requests.post(url, json=payload, timeout=10)
-    resp.raise_for_status()
+    if resp.status_code != 200:
+        # выводим подробности ошибки, чтобы понять, что именно не так
+        print("Telegram API error:", resp.status_code, resp.text)
+        resp.raise_for_status()

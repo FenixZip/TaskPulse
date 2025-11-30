@@ -1,7 +1,7 @@
 """accounts/serializers.py"""
-from django.utils.encoding import force_str
+from django.utils.encoding import force_str, force_bytes
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.http import urlsafe_base64_decode
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
@@ -414,3 +414,50 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         user.save(update_fields=["password"])
 
         return {"detail": "Пароль успешно изменён."}
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """
+    Запрос на сброс пароля.
+    Принимает:
+      - email
+    Используется, например, в:
+      POST /api/auth/password-reset/
+    """
+
+    email = serializers.EmailField()
+
+    def validate_email(self, value: str) -> str:
+        # нормализуем email
+        return value.strip().lower()
+
+    def create(self, validated_data):
+        email = validated_data["email"]
+        User = get_user_model()
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Не палим, есть ли такой пользователь
+            return {
+                "detail": (
+                    "Если пользователь с таким email существует, "
+                    "мы отправили письмо для сброса пароля."
+                )
+            }
+
+        # генерируем токен вида uidb64:token
+        token_generator = PasswordResetTokenGenerator()
+        uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+        token = token_generator.make_token(user)
+        reset_token = f"{uidb64}:{token}"
+
+        # отправляем письмо (функция у тебя уже есть)
+        send_password_reset_email(user, reset_token)
+
+        return {
+            "detail": (
+                "Если пользователь с таким email существует, "
+                "мы отправили письмо для сброса пароля."
+            )
+        }

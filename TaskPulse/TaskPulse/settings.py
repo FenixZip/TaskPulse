@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
+
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -113,7 +115,7 @@ CELERY_TASK_EAGER_PROPAGATES = os.getenv("CELERY_TASK_EAGER_PROPAGATES", "False"
 CELERY_BEAT_SCHEDULE = {
     "tasks.send_due_soon_reminders": {
         "task": "tasks.tasks_reminders.send_due_soon_reminders",
-        "schedule": timedelta(minutes=15),
+        "schedule": crontab(minute="*/1"),  # каждые 10 минут
     },
 }
 
