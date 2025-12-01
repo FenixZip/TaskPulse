@@ -383,3 +383,151 @@ button {
   margin-bottom: 1.5rem;
 }
 
+/* --- Chat --- */
+
+.chat-page {
+  max-width: 920px;
+}
+
+.chat-card {
+  margin-top: 1.5rem;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle);
+  background: radial-gradient(circle at top left, #020617, #020617);
+  display: flex;
+  flex-direction: column;
+  height: 60vh;
+  max-height: 640px;
+}
+
+.chat-card-body {
+  flex: 1;
+  padding: 0.75rem 0.75rem 0.75rem;
+  overflow-y: auto;
+}
+
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chat-empty {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.chat-message {
+  display: flex;
+}
+
+.chat-message--me {
+  justify-content: flex-end;
+}
+
+.chat-message--them {
+  justify-content: flex-start;
+}
+
+.chat-message-bubble {
+  max-width: 75%;
+  border-radius: 16px;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  font-size: 0.9rem;
+}
+
+.chat-message--me .chat-message-bubble {
+  background: #0369a1;
+  border-color: #0ea5e9;
+}
+
+.chat-message-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.chat-message-task {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.chat-message-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-message-file {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #bfdbfe;
+  text-decoration: underline;
+}
+
+.chat-input-row {
+  padding: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  gap: 0.75rem;
+}
+
+.task-status-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.task-status-value {
+  font-size: 0.9rem;
+}
+
+.task-status-done {
+  color: #22c55e;
+}
+
+.task-status-in-progress {
+  color: #60a5fa;
+}
+
+.task-status-overdue {
+  color: #f97373;
+}
+
+.task-status-new {
+  color: var(--text-secondary);
+}
+
+/* приоритеты */
+
+.task-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.task-badge-priority-high {
+  border-color: #f97373;
+  color: #fecaca;
+}
+
+.task-badge-priority-medium {
+  border-color: #facc15;
+  color: #fef9c3;
+}
+
+.task-badge-priority-low {
+  border-color: #22c55e;
+  color: #bbf7d0;
+}
+
+
