@@ -18,6 +18,20 @@ from integrations.notifications import send_telegram_message
 send_telegram_message(493089867, "Тестовое сообщение от Pulse-zone")
 
 
+docker compose down
+docker compose build
+docker compose up -d
+
+
+nginx -t
+systemctl reload nginx
+
+
+docker stop amnezia-xray amnezia-awg
+mkdir -p /var/www/taskpulse_frontend
+cp -r ~/opt/taskpulse/TaskPulse/taskpulse-frontend/dist/* /var/www/taskpulse_frontend/
+
+
 
 
 
