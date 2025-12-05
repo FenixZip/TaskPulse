@@ -1,0 +1,27 @@
+{% extends "emails/base_email.html" %}
+
+{% block subject %}Подтверждение почты в TaskPulse{% endblock %}
+
+{% block content %}
+<p>Здравствуйте{% if user.full_name %}, {{ user.full_name }}{% endif %}!</p>
+
+<p>
+  Спасибо за регистрацию в <strong>TaskPulse</strong>.
+  Пожалуйста, подтвердите ваш email, чтобы завершить регистрацию
+  и получить доступ к вашему рабочему пространству.
+</p>
+
+<p style="text-align: center;">
+  <a href="{{ verify_link }}" class="btn">Подтвердить почту</a>
+</p>
+
+<p class="secondary">
+  Если кнопка не работает, скопируйте и вставьте эту ссылку в адресную строку браузера:<br />
+  <a href="{{ verify_link }}">{{ verify_link }}</a>
+</p>
+
+<p class="secondary">
+  Если вы не регистрировались в TaskPulse, просто проигнорируйте это письмо —
+  ваш адрес не будет подтверждён.
+</p>
+{% endblock %}

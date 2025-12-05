@@ -1,0 +1,60 @@
+// src/app/router.tsx
+import { Routes, Route } from "react-router-dom";
+
+import { RootLayout } from "./layouts/RootLayout";
+import { DashboardLayout } from "./layouts/DashboardLayout";
+
+import { RequireAuth } from "./guards/RequireAuth";
+
+import { LandingPage } from "../pages/landing/LandingPage";
+
+import { LoginPage } from "../pages/auth/LoginPage";
+import { RegisterPage } from "../pages/auth/RegisterPage";
+import { ResetPasswordRequestPage } from "../pages/auth/ResetPasswordRequestPage";
+
+import { DashboardHomePage } from "../pages/dashboard/DashboardHomePage";
+import { ProfilePage } from "../pages/profile/ProfilePage";
+
+import { ConversationPage } from "../pages/chat/ConversationPage";
+import { TaskDetailsPage } from "../pages/tasks/TaskDetailsPage";
+
+import { ErrorPage } from "../pages/error/ErrorPage";
+import { NotFoundPage } from "../pages/error/NotFoundPage";
+
+export const AppRouter = () => {
+  return (
+    <Routes>
+      <Route path="/" element={<RootLayout />}>
+        {/* публичные */}
+        <Route index element={<LandingPage />} />
+
+        <Route path="auth">
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
+          <Route
+            path="reset-password"
+            element={<ResetPasswordRequestPage />}
+          />
+        </Route>
+
+        {/* приватная зона */}
+        <Route element={<RequireAuth />}>
+          <Route path="app" element={<DashboardLayout />}>
+            <Route index element={<DashboardHomePage />} />
+
+            <Route path="profile" element={<ProfilePage />} />
+
+            {/* детальная задача */}
+            <Route path="tasks/:taskId" element={<TaskDetailsPage />} />
+
+            {/* чат создатель ↔ исполнитель */}
+            <Route path="chat/:userId" element={<ConversationPage />} />
+          </Route>
+        </Route>
+
+        <Route path="error" element={<ErrorPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
+  );
+};
