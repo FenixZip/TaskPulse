@@ -1,9 +1,0 @@
-.git
-__pycache__
-*.pyc
-*.pyo
-*.log
-.env
-*.env
-celerybeat-schedule
-taskpulse-frontend
