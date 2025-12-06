@@ -1,7 +1,7 @@
 // src/app/layouts/RootLayout.tsx
 import { Outlet, Link, useNavigate } from "react-router-dom";
 import { ROUTES } from "../../shared/config/routes";
-import logo from "../../shared/assets/pulse-zone-logo.png";
+import logo from "../../shared/assets/pulse-zone-logo.png"; // оставь путь к своему лого
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useProfile } from "../../entities/user/model/useProfile";
 
@@ -12,7 +12,6 @@ export const RootLayout = () => {
   const navigate = useNavigate();
 
   const isAuthenticated = !!auth.token;
-
   const displayName = profile?.full_name || auth.user?.email || "Профиль";
 
   const handleLogout = () => {
@@ -29,12 +28,18 @@ export const RootLayout = () => {
       <header className="app-header">
         <div className="app-header-inner">
           <Link to={ROUTES.landing} className="app-logo">
-            <span className="app-logo-text">Pulse-zone</span>
+            <img src={logo} alt="Pulse-zone.tech" />
+            <span className="app-logo-text">Pulse-zone.tech</span>
           </Link>
 
           <nav className="app-nav">
             {isAuthenticated ? (
               <>
+                {/* переход к задачам из любой внутренней страницы */}
+                <Link className="app-nav-link" to={ROUTES.appRoot}>
+                  Задачи
+                </Link>
+
                 <button
                   type="button"
                   className="app-nav-link"
@@ -44,7 +49,7 @@ export const RootLayout = () => {
                 </button>
                 <button
                   type="button"
-                  className="app-nav-link app-nav-link-primary"
+                  className="app-nav-link"
                   onClick={handleLogout}
                 >
                   Выход
@@ -55,7 +60,10 @@ export const RootLayout = () => {
                 <Link className="app-nav-link" to={ROUTES.login}>
                   Вход
                 </Link>
-                <Link className="app-nav-link app-nav-link-primary" to={ROUTES.register}>
+                <Link
+                  className="app-nav-link app-nav-link-primary"
+                  to={ROUTES.register}
+                >
                   Регистрация
                 </Link>
               </>
@@ -70,8 +78,14 @@ export const RootLayout = () => {
 
       <footer className="app-footer">
         <div className="app-footer-inner">
-          <span>© {currentYear} Pulse-zone</span>
-          <span>Техническая поддержка: taskpulse@internet.ru</span>
+          <div className="app-footer-left">
+            <div>© {currentYear} Pulse-zone.tech</div>
+            <div>Все права защищены</div>
+          </div>
+          <div className="app-footer-right">
+            <div>Техническая поддержка</div>
+            <div>pulse-zone@support.ru</div>
+          </div>
         </div>
       </footer>
     </div>

@@ -3,7 +3,7 @@ python manage.py shell
 docker compose up -d --build
 
 python manage.py flush
-curl "http://localhost:8000/api/auth/verify-email/?token=d782f301-fe35-4616-88f5-c5abbe439af4"
+curl "http://localhost:8000/api/auth/verify-email/?token=92424c72-751b-4a0f-8fcd-457dc2619b1d"
 from tasks.tasks_reminders import send_task_assigned_notification
 
 send_task_assigned_notification.delay(999999)

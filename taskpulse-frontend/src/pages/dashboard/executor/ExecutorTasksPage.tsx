@@ -3,12 +3,17 @@ import { TasksList } from "../../../features/tasks/list/ui/TasksList";
 
 export const ExecutorTasksPage = () => {
   return (
-    <div>
-      <h1 className="landing-title">Мои задачи</h1>
-      <p className="landing-subtitle">
-        Список задач, поставленных вам создателем.
-      </p>
-      <TasksList mode="executor" />
+    <div className="dashboard-page">
+      <header>
+        <h1 className="dashboard-header-title">Мои задачи</h1>
+        <p className="dashboard-header-subtitle">
+          Список задач, поставленных вам создателем.
+        </p>
+      </header>
+
+      <section className="dashboard-section">
+        <TasksList mode="executor" />
+      </section>
     </div>
   );
 };

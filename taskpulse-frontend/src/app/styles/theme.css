@@ -1,6 +1,7 @@
 /* src/app/styles/theme.css */
 
 :root {
+  /* Базовый тёмный фон */
   --bg: #020617;
   --bg-elevated: #020617;
   --bg-header: #020617;
@@ -11,8 +12,9 @@
   --text-primary: #f9fafb;
   --text-secondary: #9ca3af;
 
-  --accent: #14b8a6; /* под цвет логотипа */
-  --accent-hover: #0d9488;
+  /* Новый фирменный цвет под стиль главной */
+  --accent: #a3ff12;
+  --accent-hover: #84cc16;
 
   --radius-lg: 16px;
 }

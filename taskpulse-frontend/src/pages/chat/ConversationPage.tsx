@@ -15,25 +15,22 @@ import { useAuth } from "../../shared/hooks/useAuth";
 
 interface ChatMessage {
   id: number;
-  task: number;
-  task_title: string;
+  task: number | null;
+  task_title: string | null;
   sender: number;
   sender_name: string;
   is_from_creator: boolean;
   is_from_executor: boolean;
   text: string;
+  file_url?: string | null;
   created_at: string;
-  file_url: string | null;
 }
 
 // единый диалог между текущим пользователем и peerId
 const fetchMessages = async (peerId: string): Promise<ChatMessage[]> => {
-  const response = await apiClient.get(
-    "/api/tasks/conversation-messages/",
-    {
-      params: { user_id: peerId },
-    }
-  );
+  const response = await apiClient.get("/api/tasks/conversation-messages/", {
+    params: { user_id: peerId },
+  });
   return response.data as ChatMessage[];
 };
 
@@ -41,14 +38,20 @@ const sendMessage = async (params: {
   peerId: string;
   taskId?: string | null;
   text: string;
+  file?: File | null;
 }): Promise<ChatMessage> => {
-  const body: Record<string, any> = {
-    user_id: Number(params.peerId),
-    text: params.text,
-  };
+  const { peerId, taskId, text, file } = params;
 
-  if (params.taskId) {
-    body.task = Number(params.taskId);
+  const body = new FormData();
+  body.append("user_id", peerId);
+  if (taskId) {
+    body.append("task", taskId);
+  }
+  if (text) {
+    body.append("text", text);
+  }
+  if (file) {
+    body.append("file", file);
   }
 
   const response = await apiClient.post(
@@ -64,29 +67,28 @@ export const ConversationPage = () => {
   const { auth } = useAuth();
   const queryClient = useQueryClient();
 
-  const searchParams = new URLSearchParams(location.search);
-  const taskId = searchParams.get("taskId");
-  const taskTitle = searchParams.get("taskTitle") || "Задача";
-  const peerNameFromQuery = searchParams.get("name");
+  const searchParams = useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search]
+  );
 
-  const peerName =
-    peerNameFromQuery ||
-    (location.state as any)?.peerName ||
-    "собеседником";
+  const peerName = searchParams.get("name") || "Собеседник";
+  const taskTitle = searchParams.get("taskTitle") || "Задача";
+  const taskId = searchParams.get("taskId");
 
   const [text, setText] = useState("");
-  const [pendingMessages, setPendingMessages] = useState<
-    { id: string; text: string; created_at: string }[]
-  >([]);
+  const [file, setFile] = useState<File | null>(null);
 
   const {
     data: messages = [],
     isLoading,
     isError,
-  } = useQuery({
+  } = useQuery<ChatMessage[]>({
     queryKey: ["conversation", peerId],
     queryFn: () => fetchMessages(peerId as string),
     enabled: !!peerId,
+    // простой поллинг, чтобы чат обновлялся
+    refetchInterval: 5000,
   });
 
   const myRole = auth.user?.role ?? null;
@@ -101,45 +103,46 @@ export const ConversationPage = () => {
     [messages]
   );
 
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [sortedMessages.length]);
+
   const sendMutation = useMutation({
-    mutationFn: ({ text }: { text: string }) =>
-      sendMessage({ peerId: peerId as string, taskId, text }),
+    mutationFn: (params: { text: string; file: File | null }) =>
+      sendMessage({
+        peerId: peerId as string,
+        taskId,
+        text: params.text,
+        file: params.file,
+      }),
     onSuccess: () => {
       setText("");
-      setPendingMessages([]);
-      // заглушаем Promise, чтобы TS не ругался
-      void queryClient.invalidateQueries({
+      setFile(null);
+      queryClient.invalidateQueries({
         queryKey: ["conversation", peerId],
       });
-    },
-    onError: () => {
-      setPendingMessages([]);
     },
   });
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (!peerId) return;
+
     const trimmed = text.trim();
-    if (!trimmed || !peerId) return;
+    if (!trimmed && !file) return;
 
-    // оптимистично показываем сообщение
-    setPendingMessages((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(36).slice(2),
-        text: trimmed,
-        created_at: new Date().toISOString(),
-      },
-    ]);
-
-    sendMutation.mutate({ text: trimmed });
+    sendMutation.mutate({ text: trimmed, file });
   };
 
-  // автоскролл вниз
-  const bottomRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [sortedMessages.length, pendingMessages.length]);
+  const isMine = (msg: ChatMessage) => {
+    if (!myRole) return false;
+    return (
+      (myRole === "creator" && msg.is_from_creator) ||
+      (myRole === "executor" && msg.is_from_executor)
+    );
+  };
 
   const renderBody = () => {
     if (isLoading) {
@@ -150,85 +153,47 @@ export const ConversationPage = () => {
       return <p>Не удалось загрузить сообщения. Попробуйте позже.</p>;
     }
 
-    if (!sortedMessages.length && !pendingMessages.length) {
-      return (
-        <div className="text-sm text-[var(--text-secondary)]">
-          Сообщений пока нет — самое время обсудить детали задачи 😊
-        </div>
-      );
+    if (!sortedMessages.length) {
+      return <p>Сообщений пока нет. Напишите первое сообщение.</p>;
     }
 
     return (
       <>
         {sortedMessages.map((msg) => {
-          // роли в твоём проекте в нижнем регистре: "creator" | "executor"
-          const isMine =
-            myRole === "creator"
-              ? msg.is_from_creator
-              : myRole === "executor"
-              ? msg.is_from_executor
-              : false;
+          const mine = isMine(msg);
 
           return (
             <div
               key={msg.id}
-              className={`mb-2 flex ${
-                isMine ? "justify-end" : "justify-start"
-              }`}
+              className={`chat-message-row ${mine ? "me" : "other"}`}
             >
-              <div
-                className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                  isMine
-                    ? "bg-[var(--accent)] text-black"
-                    : "bg-black/50 text-[var(--text-primary)]"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-[10px] uppercase tracking-wide opacity-70">
-                    {msg.sender_name}
-                  </span>
-                  <span className="text-[10px] opacity-60">
+              <div className={`chat-bubble ${mine ? "me" : "other"}`}>
+                <div className="chat-bubble-header">
+                  <span>{mine ? "Вы" : msg.sender_name}</span>
+                  <span>
                     {new Date(msg.created_at).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
                   </span>
                 </div>
-                <div className="text-[11px] opacity-80 mb-1">
+                <div className="chat-bubble-task">
                   {msg.task_title || taskTitle}
                 </div>
-                <div>{msg.text}</div>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* оптимистичные сообщения (мои) */}
-        {pendingMessages.map((msg) => {
-          const currentUserName =
-            (auth.user as any)?.full_name ||
-            (auth.user as any)?.fullName ||
-            auth.user?.email ||
-            "Вы";
-
-          return (
-            <div key={msg.id} className="mb-2 flex justify-end">
-              <div className="max-w-[70%] rounded-2xl px-3 py-2 text-sm shadow-sm bg-[var(--accent)]/70 text-black opacity-80">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-[10px] uppercase tracking-wide opacity-70">
-                    {currentUserName}
-                  </span>
-                  <span className="text-[10px] opacity-60">
-                    {new Date(msg.created_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-                <div className="text-[11px] opacity-80 mb-1">
-                  {taskTitle}
-                </div>
-                <div>{msg.text}</div>
+                {msg.text && (
+                  <div className="chat-message-text">{msg.text}</div>
+                )}
+                {msg.file_url && (
+                  <div className="chat-message-attachment">
+                    <a
+                      href={msg.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Вложение
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -238,19 +203,19 @@ export const ConversationPage = () => {
   };
 
   return (
-    <div className="page chat-page">
-      <h1 className="page-title">Чат с {peerName}</h1>
-      <p className="text-sm text-[var(--text-secondary)] mt-1">
+    <div className="dashboard-page">
+      <h1 className="dashboard-header-title">Чат с {peerName}</h1>
+      <p className="dashboard-header-subtitle">
         Обсуждение задачи: <strong>{taskTitle}</strong>
       </p>
 
-      <div className="mt-6 flex flex-col gap-3 h-[60vh] max-h-[600px]">
-        <div className="flex-1 overflow-y-auto rounded-2xl border border-[var(--border-subtle)] p-3 bg-black/25 text-sm">
+      <div className="chat-shell">
+        <div className="chat-messages-box">
           {renderBody()}
           <div ref={bottomRef} />
         </div>
 
-        <form onSubmit={handleSubmit} className="flex gap-3">
+        <form onSubmit={handleSubmit} className="chat-input-row">
           <Input
             placeholder="Напишите сообщение…"
             value={text}
