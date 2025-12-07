@@ -7,6 +7,13 @@ export const ROUTES = {
   resetPasswordRequest: "/auth/reset-password",
 
   appRoot: "/app",
-  creatorDashboard: "/app/creator/tasks",
-  executorDashboard: "/app/executor/tasks",
+
+  // Вкладки в шапке
+  tasks: "/app/tasks",
+  executors: "/app/executors",
+  stats: "/app/stats",
+
+  // Старые алиасы — теперь ведут на общий список задач
+  creatorDashboard: "/app/tasks",
+  executorDashboard: "/app/tasks",
 } as const;

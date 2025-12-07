@@ -20,6 +20,10 @@ export interface Task {
   assignee_name?: string;
   assignee_position?: string;
 
+  // под фильтры по компании
+  creator_company?: string;
+  assignee_company?: string;
+
   // display-поля если бэк их отдаёт
   priority_display?: string;
   status_display?: string;

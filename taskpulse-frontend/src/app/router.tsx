@@ -14,18 +14,21 @@ import { ResetPasswordRequestPage } from "../pages/auth/ResetPasswordRequestPage
 
 import { DashboardHomePage } from "../pages/dashboard/DashboardHomePage";
 import { ProfilePage } from "../pages/profile/ProfilePage";
-
-import { ConversationPage } from "../pages/chat/ConversationPage";
 import { TaskDetailsPage } from "../pages/tasks/TaskDetailsPage";
-
+import { ConversationPage } from "../pages/chat/ConversationPage";
 import { ErrorPage } from "../pages/error/ErrorPage";
 import { NotFoundPage } from "../pages/error/NotFoundPage";
+
+// новые страницы под вкладки
+import { TasksPage } from "../pages/dashboard/TasksPage";
+import { ExecutorsPage } from "../pages/dashboard/ExecutorsPage";
+import { StatsPage } from "../pages/dashboard/StatsPage";
 
 export const AppRouter = () => {
   return (
     <Routes>
       <Route path="/" element={<RootLayout />}>
-        {/* публичные */}
+        {/* публичная зона */}
         <Route index element={<LandingPage />} />
 
         <Route path="auth">
@@ -40,7 +43,13 @@ export const AppRouter = () => {
         {/* приватная зона */}
         <Route element={<RequireAuth />}>
           <Route path="app" element={<DashboardLayout />}>
+            {/* главная страница /app — можно оставить как "домик" */}
             <Route index element={<DashboardHomePage />} />
+
+            {/* вкладки */}
+            <Route path="tasks" element={<TasksPage />} />
+            <Route path="executors" element={<ExecutorsPage />} />
+            <Route path="stats" element={<StatsPage />} />
 
             <Route path="profile" element={<ProfilePage />} />
 

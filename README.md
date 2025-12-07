@@ -19,12 +19,10 @@ send_telegram_message(493089867, "Тестовое сообщение от Pulse
 
 
 docker compose down
-docker compose build
+
+
 docker compose up -d
 
-
-nginx -t
-systemctl reload nginx
 
 
 docker stop amnezia-xray amnezia-awg
@@ -38,7 +36,16 @@ git commit -m "Remove .env.prod from repo and ignore it"
 git push
 
 
+VITE_API_BASE_URL=/api npm run build
+npm run build
+cp -r ~/opt/taskpulse/TaskPulse/taskpulse-frontend/dist/* /var/www/taskpulse_frontend/
 
+
+nginx -t
+systemctl reload nginx
+
+
+grep -R "api/auth" -n src
 
 
 

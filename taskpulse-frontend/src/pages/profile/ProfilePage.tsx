@@ -1,7 +1,5 @@
 // src/pages/profile/ProfilePage.tsx
 import { useState, type FormEvent, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { ROUTES } from "../../shared/config/routes";
 import { useProfile } from "../../entities/user/model/useProfile";
 import { Input } from "../../shared/ui/Input";
 import { Button } from "../../shared/ui/Button";
@@ -11,31 +9,39 @@ import { useTelegramProfile } from "../../shared/hooks/useTelegramProfile";
 import { TELEGRAM_BOT_URL } from "../../shared/config/env";
 
 export const ProfilePage = () => {
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile, isLoading, isError } = useProfile();
   const updateProfileMutation = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
-  const { data: telegramProfile, refetch: refetchTelegram } =
-    useTelegramProfile();
+  const {
+    data: telegramProfile,
+    refetch: refetchTelegram,
+    isLoading: telegramLoading,
+  } = useTelegramProfile();
 
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
   const [position, setPosition] = useState("");
+
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
-  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+  const [newPassword1, setNewPassword1] = useState("");
+  const [newPassword2, setNewPassword2] = useState("");
+
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile && !fullName && !company && !position) {
-      setFullName(profile.full_name || "");
-      setCompany(profile.company || "");
-      setPosition(profile.position || "");
+    if (profile) {
+      setFullName(profile.full_name);
+      setCompany(profile.company);
+      setPosition(profile.position);
     }
-  }, [profile, fullName, company, position]);
+  }, [profile]);
 
   useEffect(() => {
     if (avatarFile) {
@@ -43,56 +49,94 @@ export const ProfilePage = () => {
       setAvatarPreview(url);
       return () => URL.revokeObjectURL(url);
     }
+    return undefined;
   }, [avatarFile]);
 
-  if (isLoading || !profile) {
-    return <div className="dashboard-page">Загружаем профиль…</div>;
+  const telegramLinked = !!telegramProfile;
+
+  if (isLoading) {
+    return (
+      <div className="dashboard-page">
+        <p className="dashboard-header-subtitle">Загружаем профиль…</p>
+      </div>
+    );
   }
 
-  const handleProfileSubmit = async (e: FormEvent) => {
+  if (isError || !profile) {
+    return (
+      <div className="dashboard-page">
+        <h1 className="dashboard-header-title">Личный кабинет</h1>
+        <p className="dashboard-header-subtitle text-red-400">
+          Не удалось загрузить данные профиля.
+        </p>
+      </div>
+    );
+  }
+
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setAvatarFile(file);
+  };
+
+  const handleProfileSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setProfileMessage(null);
+    setProfileError(null);
 
     try {
       await updateProfileMutation.mutateAsync({
         full_name: fullName,
         company,
         position,
-        avatar: avatarFile ?? undefined,
+        avatar: avatarFile,
       });
+
       setProfileMessage("Профиль обновлён.");
-    } catch {
-      setProfileMessage("Не удалось обновить профиль.");
+      setAvatarFile(null);
+    } catch (error) {
+      console.error(error);
+      setProfileError("Не удалось обновить профиль. Попробуйте ещё раз.");
     }
   };
 
-  const handlePasswordSubmit = async (e: FormEvent) => {
+  const handlePasswordSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setPasswordMessage(null);
+    setPasswordError(null);
+
+    if (newPassword1 !== newPassword2) {
+      setPasswordError("Новые пароли не совпадают.");
+      return;
+    }
+
+    if (!newPassword1) {
+      setPasswordError("Введите новый пароль.");
+      return;
+    }
 
     try {
       await changePasswordMutation.mutateAsync({
         current_password: currentPassword,
-        new_password: newPassword,
+        new_password: newPassword1,
       });
-      setPasswordMessage("Пароль изменён.");
+
+      setPasswordMessage("Пароль успешно изменён.");
       setCurrentPassword("");
-      setNewPassword("");
-    } catch {
-      setPasswordMessage(
-        "Не удалось изменить пароль. Проверьте текущий пароль."
-      );
+      setNewPassword1("");
+      setNewPassword2("");
+    } catch (error) {
+      console.error(error);
+      setPasswordError("Не удалось изменить пароль. Проверьте данные.");
     }
   };
 
-  const handleTelegramConfirm = () => {
+  const handleOpenTelegram = () => {
     window.open(TELEGRAM_BOT_URL, "_blank", "noopener,noreferrer");
-    setTimeout(() => {
-      refetchTelegram();
-    }, 3000);
   };
 
-  const telegramLinked = !!telegramProfile;
+  const handleTelegramConfirm = async () => {
+    await refetchTelegram();
+  };
 
   return (
     <div className="dashboard-page">
@@ -103,16 +147,6 @@ export const ProfilePage = () => {
           безопасность аккаунта.
         </p>
       </header>
-
-      {/* быстрый переход обратно к задачам */}
-      <div style={{ marginTop: "1rem" }}>
-        <Link
-          className="landing-hero-btn landing-hero-btn-secondary"
-          to={ROUTES.appRoot}
-        >
-          ← К задачам
-        </Link>
-      </div>
 
       {/* две карточки рядом */}
       <div className="profile-grid">
@@ -147,11 +181,11 @@ export const ProfilePage = () => {
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null;
-                  setAvatarFile(file);
-                }}
+                onChange={handleAvatarChange}
               />
+              <p className="profile-card-description">
+                Загрузите квадратное изображение, чтобы аватар выглядел лучше.
+              </p>
             </div>
           </div>
 
@@ -172,10 +206,11 @@ export const ProfilePage = () => {
               onChange={(e) => setPosition(e.target.value)}
             />
 
+            {profileError && (
+              <p className="form-error-text">{profileError}</p>
+            )}
             {profileMessage && (
-              <div className="text-xs" style={{ color: "#a3ff12" }}>
-                {profileMessage}
-              </div>
+              <p className="form-success-text">{profileMessage}</p>
             )}
 
             <Button
@@ -188,79 +223,100 @@ export const ProfilePage = () => {
           </form>
         </section>
 
-        {/* Telegram / интеграция */}
+        {/* Безопасность + Telegram */}
         <section className="dashboard-section profile-card">
-          <h2 className="profile-card-title">Telegram</h2>
+          <h2 className="profile-card-title">Безопасность и уведомления</h2>
           <p className="profile-card-description">
-            Подключите Telegram, чтобы получать уведомления о задачах и
-            дедлайнах.
+            Управляйте паролем и подключите Telegram, чтобы получать уведомления
+            о задачах и дедлайнах.
           </p>
 
-          {telegramLinked ? (
-            <>
-              <p className="landing-card-text">
-                Telegram подключён. ID:{" "}
-                <strong>{telegramProfile?.telegram_user_id}</strong>
-              </p>
-              <p className="landing-card-text">
-                Вы будете получать уведомления о задачах и дедлайнах в Telegram.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="landing-card-text">
-                Telegram ещё не подтверждён. Без подтверждённого Telegram вы не
-                можете получать задачи и работать с ними.
-              </p>
-              <p className="landing-card-text">
-                Нажмите кнопку ниже, откройте бота и нажмите{" "}
-                <strong>Start</strong>.
-              </p>
-            </>
-          )}
+          {/* Смена пароля */}
+          <div className="profile-subsection">
+            <h3 className="profile-section-title">Смена пароля</h3>
 
-          <Button type="button" onClick={handleTelegramConfirm} fullWidth>
-            {telegramLinked ? "Обновить статус Telegram" : "Подтвердить Telegram"}
-          </Button>
+            <form className="auth-form" onSubmit={handlePasswordSubmit}>
+              <Input
+                label="Текущий пароль"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
+              <Input
+                label="Новый пароль"
+                type="password"
+                value={newPassword1}
+                onChange={(e) => setNewPassword1(e.target.value)}
+              />
+              <Input
+                label="Повторите новый пароль"
+                type="password"
+                value={newPassword2}
+                onChange={(e) => setNewPassword2(e.target.value)}
+              />
+
+              {passwordError && (
+                <p className="form-error-text">{passwordError}</p>
+              )}
+              {passwordMessage && (
+                <p className="form-success-text">{passwordMessage}</p>
+              )}
+
+              <Button
+                type="submit"
+                fullWidth
+                loading={changePasswordMutation.isPending}
+              >
+                Изменить пароль
+              </Button>
+            </form>
+          </div>
+
+          {/* Telegram */}
+          <div className="profile-subsection">
+            <h3 className="profile-section-title">Telegram</h3>
+            <p className="profile-card-description">
+              Подключите Telegram-бота, чтобы получать уведомления о задачах и
+              дедлайнах.
+            </p>
+
+            {telegramLoading ? (
+              <p className="landing-card-text">Проверяем статус Telegram…</p>
+            ) : telegramLinked ? (
+              <>
+                <p className="landing-card-text">
+                  Telegram подключён. ID:{" "}
+                  <strong>{telegramProfile?.telegram_user_id}</strong>
+                </p>
+                <p className="landing-card-text">
+                  Вы будете получать уведомления о задачах и дедлайнах в
+                  Telegram.
+                </p>
+              </>
+            ) : (
+              <p className="landing-card-text">
+                Telegram ещё не подтверждён. Без подтверждения бот не сможет
+                отправлять вам уведомления.
+              </p>
+            )}
+
+            <div className="profile-telegram-actions">
+              <Button type="button" onClick={handleOpenTelegram} fullWidth>
+                Открыть бота в Telegram
+              </Button>
+              <Button
+                type="button"
+                onClick={handleTelegramConfirm}
+                fullWidth
+              >
+                {telegramLinked
+                  ? "Обновить статус Telegram"
+                  : "Подтвердить Telegram"}
+              </Button>
+            </div>
+          </div>
         </section>
       </div>
-
-      {/* Смена пароля — отдельная карточка снизу */}
-      <section className="dashboard-section profile-card" style={{ marginTop: "1.75rem" }}>
-        <h2 className="profile-card-title">Смена пароля</h2>
-        <p className="profile-card-description">
-          Для безопасности аккаунта используйте уникальный сложный пароль.
-        </p>
-
-        <form className="auth-form" onSubmit={handlePasswordSubmit}>
-          <Input
-            label="Текущий пароль"
-            type="password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-          />
-          <Input
-            label="Новый пароль"
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-
-          {passwordMessage && (
-            <div className="text-xs" style={{ color: "#f97316" }}>
-              {passwordMessage}
-            </div>
-          )}
-
-          <Button
-            type="submit"
-            fullWidth
-            loading={changePasswordMutation.isPending}
-          >
-            Изменить пароль
-          </Button>
-        </form>
-      </section>
     </div>
   );
-};
+}cd
