@@ -25,9 +25,8 @@ def send_html_email(subject: str, template_name: str, context: dict, to_email: s
 def send_verification_email(user, token):
     """Письмо для подтверждения email."""
 
-    # BASE_URL фронта, который принимает /verify-email?token=...
     base = getattr(settings, "FRONTEND_BASE_URL", "").rstrip("/")
-    verify_link = f"{base}/verify-email?token={token.token}"
+    verify_link = f"{base}/api/auth/verify-email?token={token.token}"
 
     context = {
         "user": user,

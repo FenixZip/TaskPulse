@@ -20,8 +20,10 @@ from .serializers import (
     TaskAttachmentSerializer,
     TaskSerializer,
     TaskUpsertSerializer,
-    TaskMessageSerializer
+    TaskMessageSerializer,
 )
+
+User = get_user_model()
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -54,19 +56,19 @@ class TaskViewSet(viewsets.ModelViewSet):
             .select_related("creator", "assignee")
             .prefetch_related("attachments", "changes", "actions")
         )
-
         return qs
 
     def get_serializer_class(self):
-        """Возвращает сериализатор в зависимости от действия (list/retrieve vs create/update)."""
-
+        """
+        Возвращает сериализатор в зависимости от действия
+        (list/retrieve vs create/update).
+        """
         if self.action in ("create", "update", "partial_update"):
             return TaskUpsertSerializer
         return TaskSerializer
 
     def get_permissions(self):
         """Настраиваем права доступа."""
-
         if self.action in ("list", "create"):
             return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated(), IsCreatorOrAssignee()]
@@ -76,7 +78,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         Создаёт задачу через upsert-сериализатор,
         а отдаёт read-сериализатор (с полем creator и вложениями).
         """
-
         upsert = TaskUpsertSerializer(data=request.data, context={"request": request})
         upsert.is_valid(raise_exception=True)
         task = upsert.save()
@@ -86,7 +87,6 @@ class TaskViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="attachments")
     def upload_attachment(self, request, pk=None):
         """POST /api/tasks/{id}/attachments/"""
-
         task = self.get_object()
         ser = TaskAttachmentSerializer(data=request.data, context={"request": request})
         ser.is_valid(raise_exception=True)
@@ -100,7 +100,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         Исполнитель подтверждает, что уложится в срок.
         Запишем событие в журнал.
         """
-
         task = self.get_object()
         if task.assignee_id != request.user.id:
             return Response(
@@ -118,7 +117,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             task=task,
             changed_by=request.user,
             field="confirm_on_time",
-            old_value=None,
+            old_value="false",
             new_value="true",
             reason=ser.validated_data.get("comment", "Подтверждение сроков"),
         )
@@ -130,7 +129,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         POST /api/tasks/{id}/extend-1d
         Продлевает дедлайн задачи на сутки. Комментарий обязателен.
         """
-
         task = self.get_object()
         if task.assignee_id != request.user.id:
             return Response(
@@ -166,7 +164,9 @@ class ConversationMessagesView(APIView):
     """
     Общий диалог между текущим пользователем и другим пользователем (создатель ↔ исполнитель)
     по всем задачам сразу.
+
     GET /api/tasks/conversation-messages/?user_id=<id>
+
     POST /api/tasks/conversation-messages/
       data:
         - user_id: id собеседника (создатель/исполнитель)
@@ -194,13 +194,6 @@ class ConversationMessagesView(APIView):
                 {"detail": "Некорректный user_id."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        try:
-            other_id = int(other_id)
-        except ValueError:
-            return Response(
-                {"detail": "Некорректный user_id."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         try:
             other = User.objects.get(pk=other_id)
@@ -210,18 +203,20 @@ class ConversationMessagesView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-            # Все сообщения по задачам, где user и other связаны как creator/assignee
-            qs = (
-                TaskMessage.objects.filter(
-                    Q(task__creator=user, task__assignee=other)
-                    | Q(task__creator=other, task__assignee=user)
-                )
-                .select_related("task", "sender")
-                .order_by("created_at")
+        # Все сообщения по задачам, где user и other связаны как creator/assignee
+        qs = (
+            TaskMessage.objects.filter(
+                Q(task__creator=user, task__assignee=other)
+                | Q(task__creator=other, task__assignee=user)
             )
+            .select_related("task", "sender")
+            .order_by("created_at")
+        )
 
-            serializer = TaskMessageSerializer(qs, many=True, context={"request": request})
-            return Response(serializer.data)
+        serializer = TaskMessageSerializer(
+            qs, many=True, context={"request": request}
+        )
+        return Response(serializer.data)
 
     def post(self, request):
         user = request.user
@@ -249,22 +244,23 @@ class ConversationMessagesView(APIView):
                 {"detail": "Задача не найдена."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-            # проверяем, что эта задача действительно между текущим пользователем и other
-            if not (
-                    (task.creator_id == user.id and task.assignee_id == other.id)
-                    or (task.creator_id == other.id and task.assignee_id == user.id)
-            ):
-                return Response(
-                    {"detail": "Нет доступа к чату по этой задаче."},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
 
-            serializer = TaskMessageSerializer(
-                data=request.data,
-                context={"request": request},
+        # проверяем, что эта задача действительно между текущим пользователем и other
+        if not (
+            (task.creator_id == user.id and task.assignee_id == other.id)
+            or (task.creator_id == other.id and task.assignee_id == user.id)
+        ):
+            return Response(
+                {"detail": "Нет доступа к чату по этой задаче."},
+                status=status.HTTP_403_FORBIDDEN,
             )
-            serializer.is_valid(raise_exception=True)
-            message = serializer.save(task=task, sender=user)
 
-            out = TaskMessageSerializer(message, context={"request": request})
-            return Response(out.data, status=status.HTTP_201_CREATED)
+        serializer = TaskMessageSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        message = serializer.save(task=task, sender=user)
+
+        out = TaskMessageSerializer(message, context={"request": request})
+        return Response(out.data, status=status.HTTP_201_CREATED)

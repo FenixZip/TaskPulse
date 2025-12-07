@@ -72,7 +72,7 @@ class Task(models.Model):
         default=Status.NEW,
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self) -> str:

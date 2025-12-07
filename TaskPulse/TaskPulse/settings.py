@@ -80,10 +80,6 @@ INSTALLED_APPS = [
     "tasks.apps.TasksConfig",
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
 
 AUTH_USER_MODEL = "accounts.User"
 
@@ -186,10 +182,6 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT"),
     }
 }
-
-assert os.getenv("DB_NAME"), "DB_NAME не найден в окружении"
-assert os.getenv("DB_USER"), "DB_USER не найден"
-assert os.getenv("DB_PASSWORD"), "DB_PASSWORD не найден"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
