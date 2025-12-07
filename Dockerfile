@@ -14,14 +14,14 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Установим зависимости
-COPY TaskPulse/TaskPulse/requirements.txt /app/requirements.txt
+COPY TaskPulse/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Копируем весь проект
 COPY TaskPulse/ /app/
 
 # Дальше будем работать из папки с manage.py
-WORKDIR /app/TaskPulse
+WORKDIR /app
 
 EXPOSE 8000
 

@@ -1,6 +1,11 @@
 npm run dev
 python manage.py shell
-docker compose up -d --build
+docker compose build web
+docker compose up -d
+
+docker logs -f taskpulse-web
+
+
 
 python manage.py flush
 curl "http://localhost:8000/api/auth/verify-email/?token=92424c72-751b-4a0f-8fcd-457dc2619b1d"

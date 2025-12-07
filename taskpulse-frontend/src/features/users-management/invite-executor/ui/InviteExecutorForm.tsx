@@ -6,7 +6,7 @@ import { Input } from "../../../../shared/ui/Input";
 import { Button } from "../../../../shared/ui/Button";
 
 const inviteExecutorRequest = async (email: string) => {
-  const { data } = await apiClient.post("/api/auth/invitations", { email });
+  const { data } = await apiClient.post("/api/auth/invitations/", { email });
   return data;
 };
 
