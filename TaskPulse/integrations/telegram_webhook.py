@@ -34,23 +34,21 @@ def telegram_webhook(request: HttpRequest, secret: str):
 
     URL: /api/integrations/telegram/webhook/<secret>/
 
-    - Проверяем secret.
-    - Принимаем только POST.
-    - Обрабатываем:
-        /start <token>  – привязка по токену (из deep-link)
-        /start          – привязка по последнему созданному токену
+    Обрабатываем:
+
+      /start <token>  – привязка по токену (из deep-link)
+      /start          – привязка по последнему созданному токену
     """
 
-    # 1. проверяем секрет
+    # секрет
     if secret != settings.TELEGRAM_WEBHOOK_SECRET:
         return HttpResponseForbidden("Invalid secret")
 
-    # 2. Telegram иногда дёргает GET/HEAD — на них просто ок
+    # Telegram может дёргать GET/HEAD – просто отвечаем ok
     if request.method != "POST":
         return JsonResponse({"ok": True})
 
     try:
-        # 3. читаем JSON
         try:
             payload = json.loads(request.body.decode("utf-8"))
         except json.JSONDecodeError:
@@ -68,16 +66,16 @@ def telegram_webhook(request: HttpRequest, secret: str):
         if chat_id is None:
             return JsonResponse({"ok": True})
 
-        # ---------- ОБРАБОТКА /start ----------
+        # ---------- /start ----------
         if text.startswith("/start"):
             parts = text.split(maxsplit=1)
             start_token: Optional[str] = None
 
             if len(parts) == 2 and parts[1]:
-                # классический /start <token> из deep-link
+                # /start <token> из deep-link
                 start_token = parts[1]
             else:
-                # /start без параметра → берём последнюю созданную ссылку
+                # /start без параметра — берём последний созданный token
                 try:
                     last_link = (
                         TelegramLinkToken.objects
@@ -90,7 +88,6 @@ def telegram_webhook(request: HttpRequest, secret: str):
                     logger.exception("Failed to get last TelegramLinkToken")
 
             if not start_token:
-                # вообще не смогли достать токен — просто приветствие
                 send_telegram_message(
                     chat_id,
                     "👋 Это бот Pulse-zone. Для привязки аккаунта зайдите на сайт "
@@ -98,7 +95,7 @@ def telegram_webhook(request: HttpRequest, secret: str):
                 )
                 return JsonResponse({"ok": True})
 
-            # пробуем найти TelegramLinkToken по токену (без фильтра по is_used)
+            # ищем TelegramLinkToken по токену
             try:
                 link = (
                     TelegramLinkToken.objects
@@ -114,13 +111,13 @@ def telegram_webhook(request: HttpRequest, secret: str):
 
             user = link.user
 
-            # создаём/обновляем TelegramProfile для этого пользователя
+            # создаём/обновляем профиль
             profile, _ = TelegramProfile.objects.get_or_create(user=user)
             profile.telegram_user_id = chat_id
             profile.chat_id = chat_id
             profile.save(update_fields=["telegram_user_id", "chat_id"])
 
-            # опционально можно пометить токен как использованный, но это уже не критично
+            # помечаем токен использованным, если есть поле
             if hasattr(link, "is_used"):
                 link.is_used = True
                 link.save(update_fields=["is_used"])
@@ -143,6 +140,6 @@ def telegram_webhook(request: HttpRequest, secret: str):
         return JsonResponse({"ok": True})
 
     except Exception:  # noqa: BLE001
-        # на всякий случай ловим любые ошибки, чтобы НИКОГДА не вернуть 500
         logger.exception("Error while handling Telegram webhook")
+        # ВАЖНО: никогда не даём 500 Telegram'у
         return JsonResponse({"ok": True})

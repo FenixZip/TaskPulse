@@ -1,60 +1,54 @@
 """TaskPulse/integrations/views_api.py"""
 
 from django.conf import settings
-from django.shortcuts import get_object_or_404
-
-from integrations.models import TelegramProfile, TelegramLinkToken
-from integrations.serializers import TelegramProfileSerializer
-
-from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
+
+from .models import TelegramProfile, TelegramLinkToken
 
 
-class TelegramProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def telegram_profile(request):
     """
-    Вьюсет только для «моего телеграм-профиля».
+    GET /api/integrations/telegram/profile/
 
-    URL: /api/integrations/telegram/profile/
-
-    Возвращает профиль Telegram текущего пользователя, если он существует.
+    Возвращает информацию о привязке Telegram.
+    Если профиля нет – возвращает null в data.
     """
+    try:
+        profile = TelegramProfile.objects.get(user=request.user)
+    except TelegramProfile.DoesNotExist:
+        return Response({"data": None})
 
-    serializer_class = TelegramProfileSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        """Всегда ищем профиль по текущему пользователю, pk не нужен."""
-        return get_object_or_404(TelegramProfile, user=self.request.user)
-
-    def retrieve(self, request, *args, **kwargs):
-        obj = self.get_object()
-        serializer = self.get_serializer(obj)
-        return Response(serializer.data)
+    return Response(
+        {
+            "data": {
+                "telegram_user_id": profile.telegram_user_id,
+                "chat_id": profile.chat_id,
+            }
+        }
+    )
 
 
-class TelegramLinkStartView(APIView):
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def telegram_link_start(request):
     """
     POST /api/integrations/telegram/link-start/
 
-    Создаёт одноразовый TelegramLinkToken для текущего пользователя
-    и возвращает deep-link на бота:
-
-        https://t.me/<TELEGRAM_BOT_NAME>?start=<token>
+    Создаёт TelegramLinkToken для текущего пользователя и
+    возвращает ссылку на бота вида
+    https://t.me/<bot>?start=<token>
     """
+    link = TelegramLinkToken.objects.create(user=request.user)
 
-    permission_classes = [IsAuthenticated]
+    bot_name = getattr(settings, "TELEGRAM_BOT_NAME", "").strip()
+    if not bot_name:
+        return Response(
+            {"detail": "TELEGRAM_BOT_NAME is not configured."}, status=500
+        )
 
-    def post(self, request):
-        bot_name = getattr(settings, "TELEGRAM_BOT_NAME", "").strip()
-        if not bot_name:
-            return Response(
-                {"detail": "TELEGRAM_BOT_NAME не настроен."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-        link_token = TelegramLinkToken.objects.create(user=request.user)
-        deep_link = f"https://t.me/{bot_name}?start={link_token.token}"
-
-        return Response({"link": deep_link}, status=status.HTTP_200_OK)
+    deep_link = f"https://t.me/{bot_name}?start={link.token}"
+    return Response({"link": deep_link})
