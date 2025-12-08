@@ -137,7 +137,16 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class InvitationCreateSerializer(serializers.ModelSerializer):
-    """Сериализатор создания инвайта (только для CREATOR)."""
+    """
+    Сериализатор создания инвайта (только для CREATOR).
+
+    Поведение:
+    - нормализует email;
+    - запрещает приглашать самого себя;
+    - если уже существует не принятый инвайт к этому email от текущего пользователя —
+      НЕ создаёт новый, а переотправляет письмо по существующему инвайту;
+    - если инвайт уже принят, возвращает аккуратную ошибку.
+    """
 
     email = serializers.EmailField()
 
@@ -146,38 +155,45 @@ class InvitationCreateSerializer(serializers.ModelSerializer):
         fields = ("email",)
 
     def validate_email(self, value: str) -> str:
-        """
-        Нормализуем email и не даём приглашать самого себя.
-        """
         request = self.context["request"]
         email = value.strip().lower()
 
-        if request.user.email.lower() == email:
-            raise serializers.ValidationError("Нельзя отправить приглашение на свой же email.")
-
+        # нельзя приглашать самого себя
+        if request.user and request.user.email.lower() == email:
+            raise serializers.ValidationError("Нельзя пригласить самого себя.")
         return email
 
     def create(self, validated_data):
-        """
-        Создаёт Invitation от имени текущего аутентифицированного пользователя
-        и отправляет письмо-приглашение.
-        """
-
         request = self.context["request"]
         email = validated_data["email"]
 
-        # По-хорошему можно добавить простой антиспам:
-        # не чаще N инвайтов на один email от одного создателя за период.
-        # Здесь оставляем минималистично – всегда создаём новый инвайт.
-        invitation = Invitation.objects.create(
-            invited_by=request.user,
-            email=email,
+        # пробуем найти существующий инвайт от этого же создателя
+        invitation = (
+            Invitation.objects.filter(
+                email=email,
+                invited_by=request.user,
+            )
+            .order_by("-created_at")
+            .first()
         )
 
-        # У модели Invitation уже есть token (используется в AcceptInviteSerializer)
+        # если инвайт уже принят — не даём создавать новый
+        if invitation and invitation.accepted_at is not None:
+            raise serializers.ValidationError(
+                {"detail": "Этот пользователь уже принял приглашение."}
+            )
+
+        # если инвайт ещё не принят — переиспользуем его
+        if invitation is None:
+            invitation = Invitation.objects.create(
+                invited_by=request.user,
+                email=email,
+            )
+
+        # У Invitation уже есть token
         invite_token = str(invitation.token)
 
-        # Отправляем красивое HTML-письмо
+        # Отправляем HTML-письмо
         send_invite_email(invitation, invite_token)
 
         return invitation
