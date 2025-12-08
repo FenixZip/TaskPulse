@@ -36,10 +36,9 @@ def telegram_webhook(request: HttpRequest, secret: str):
 
     - Проверяем secret.
     - Принимаем только POST.
-    - Обрабатываем /start <token> и /start без токена.
-      Если токена нет — пытаемся взять последний неиспользованный TelegramLinkToken.
-    - По токену находим пользователя, создаём/обновляем TelegramProfile и
-      отвечаем "✅ Telegram успешно привязан ...".
+    - Обрабатываем:
+        /start <token>  – привязка по токену
+        /start          – привязка по последнему неиспользованному токену
     """
 
     # 1. секрет в URL
@@ -69,29 +68,30 @@ def telegram_webhook(request: HttpRequest, secret: str):
         if chat_id is None:
             return JsonResponse({"ok": True})
 
-        # 4. /start [token]
+        # ---- ОБРАБОТКА /start ----
         if text.startswith("/start"):
             parts = text.split(maxsplit=1)
-
             start_token: Optional[str] = None
 
-            # /start <token> — нормальный сценарий
-            if len(parts) == 2:
+            if len(parts) == 2 and parts[1]:
+                # классический /start <token> из deep-link
                 start_token = parts[1]
             else:
-                # /start без токена — пробуем взять последний неиспользованный link-token
+                # /start без параметра -> берём последний неиспользованный токен
                 try:
-                    pending_tokens = list(
-                        TelegramLinkToken.objects.filter(is_used=False)
-                        .order_by("-created_at")[:2]
+                    last_link = (
+                        TelegramLinkToken.objects
+                        .filter(is_used=False)
+                        .order_by("-created_at")
+                        .first()
                     )
-                    if len(pending_tokens) == 1:
-                        start_token = str(pending_tokens[0].token)
+                    if last_link:
+                        start_token = str(last_link.token)
                 except Exception:  # noqa: BLE001
-                    logger.exception("Failed to select fallback TelegramLinkToken")
+                    logger.exception("Failed to get last TelegramLinkToken")
 
             if not start_token:
-                # вообще нет токена — просто показываем стандартное приветствие
+                # вообще нет ни токена, ни неиспользованных ссылок
                 send_telegram_message(
                     chat_id,
                     "👋 Это бот Pulse-zone. Для привязки аккаунта зайдите на сайт "
@@ -131,7 +131,7 @@ def telegram_webhook(request: HttpRequest, secret: str):
             )
             return JsonResponse({"ok": True})
 
-        # /help
+        # ---- /help ----
         if text == "/help":
             send_telegram_message(
                 chat_id,
@@ -139,10 +139,9 @@ def telegram_webhook(request: HttpRequest, secret: str):
             )
             return JsonResponse({"ok": True})
 
-        # все остальные сообщения игнорируем
+        # всё остальное игнорируем
         return JsonResponse({"ok": True})
 
     except Exception:  # noqa: BLE001
-        # Никогда не роняем вебхук 500-кой — просто логируем.
         logger.exception("Error while handling Telegram webhook")
         return JsonResponse({"ok": True})
