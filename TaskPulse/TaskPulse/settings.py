@@ -43,7 +43,7 @@ if not SECRET_KEY and not DEBUG:
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
-TELEGRAM_BOT_NAME = os.getenv("TELEGRAM_BOT_NAME", "")
+TELEGRAM_BOT_NAME = os.getenv("TELEGRAM_BOT_NAME", "pulse_zone_tech_bot")
 
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

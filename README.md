@@ -47,7 +47,7 @@ cp -r ~/opt/taskpulse/TaskPulse/taskpulse-frontend/dist/* /var/www/taskpulse_fro
 
 
 nginx -t
-systemctl reload nginx_
+systemctl reload nginx
 
 
 grep -R "api/auth" -n src
