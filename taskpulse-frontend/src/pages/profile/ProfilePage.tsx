@@ -6,9 +6,11 @@ import { Button } from "../../shared/ui/Button";
 import { useUpdateProfile } from "../../features/profile/model/useUpdateProfile";
 import { useChangePassword } from "../../features/profile/model/useChangePassword";
 import { useTelegramProfile } from "../../shared/hooks/useTelegramProfile";
-import { TELEGRAM_BOT_URL } from "../../shared/config/env";
+import { useAuth } from "../../shared/hooks/useAuth";
 
 export const ProfilePage = () => {
+  const { auth } = useAuth();
+
   const { data: profile, isLoading, isError } = useProfile();
   const updateProfileMutation = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
@@ -34,6 +36,11 @@ export const ProfilePage = () => {
 
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Состояние для Telegram-части
+  const [telegramError, setTelegramError] = useState<string | null>(null);
+  const [telegramMessage, setTelegramMessage] = useState<string | null>(null);
+  const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -73,7 +80,9 @@ export const ProfilePage = () => {
     );
   }
 
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0] || null;
     setAvatarFile(file);
   };
@@ -130,12 +139,76 @@ export const ProfilePage = () => {
     }
   };
 
-  const handleOpenTelegram = () => {
-    window.open(TELEGRAM_BOT_URL, "_blank", "noopener,noreferrer");
+  /**
+   * Запрос на backend: создаём link-token и получаем ссылку на бота
+   * POST /api/integrations/telegram/link-start/
+   */
+  const handleTelegramConnect = async () => {
+    setTelegramError(null);
+    setTelegramMessage(null);
+    setTelegramLinkLoading(true);
+
+    try {
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+
+      if (auth?.token) {
+        headers.Authorization = `Token ${auth.token}`;
+      }
+
+      const response = await fetch(
+        "/api/integrations/telegram/link-start/",
+        {
+          method: "POST",
+          headers,
+        },
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          data.detail || `Ошибка сервера: ${response.status}`,
+        );
+      }
+
+      const data = await response.json();
+      const link = data?.link as string | undefined;
+
+      if (!link) {
+        throw new Error("Сервер не вернул ссылку на Telegram-бота.");
+      }
+
+      // Переходим в бота – дальше пользователь жмёт /start
+      window.location.href = link;
+    } catch (error: any) {
+      console.error(error);
+      setTelegramError(
+        error?.message ||
+          "Не удалось получить ссылку на Telegram-бота.",
+      );
+    } finally {
+      setTelegramLinkLoading(false);
+    }
   };
 
-  const handleTelegramConfirm = async () => {
-    await refetchTelegram();
+  /**
+   * После того как пользователь нажал /start в боте —
+   * обновляем статус привязки на фронте.
+   */
+  const handleTelegramRefresh = async () => {
+    setTelegramError(null);
+    setTelegramMessage(null);
+
+    try {
+      await refetchTelegram();
+      setTelegramMessage(
+        "Статус Telegram обновлён. Если вы нажали /start в боте, привязка должна появиться.",
+      );
+    } catch (error) {
+      console.error(error);
+      setTelegramError("Не удалось обновить статус Telegram.");
+    }
   };
 
   return (
@@ -154,8 +227,8 @@ export const ProfilePage = () => {
         <section className="dashboard-section profile-card">
           <h2 className="profile-card-title">Профиль</h2>
           <p className="profile-card-description">
-            Обновите имя, компанию и должность, чтобы коллеги видели актуальную
-            информацию.
+            Обновите имя, компанию и должность, чтобы коллеги видели
+            актуальную информацию.
           </p>
 
           <p className="landing-card-text">
@@ -184,7 +257,8 @@ export const ProfilePage = () => {
                 onChange={handleAvatarChange}
               />
               <p className="profile-card-description">
-                Загрузите квадратное изображение, чтобы аватар выглядел лучше.
+                Загрузите квадратное изображение, чтобы аватар выглядел
+                лучше.
               </p>
             </div>
           </div>
@@ -227,8 +301,8 @@ export const ProfilePage = () => {
         <section className="dashboard-section profile-card">
           <h2 className="profile-card-title">Безопасность и уведомления</h2>
           <p className="profile-card-description">
-            Управляйте паролем и подключите Telegram, чтобы получать уведомления
-            о задачах и дедлайнах.
+            Управляйте паролем и подключите Telegram, чтобы получать
+            уведомления о задачах и дедлайнах.
           </p>
 
           {/* Смена пароля */}
@@ -281,12 +355,17 @@ export const ProfilePage = () => {
             </p>
 
             {telegramLoading ? (
-              <p className="landing-card-text">Проверяем статус Telegram…</p>
+              <p className="landing-card-text">
+                Проверяем статус Telegram…
+              </p>
             ) : telegramLinked ? (
               <>
                 <p className="landing-card-text">
                   Telegram подключён. ID:{" "}
-                  <strong>{telegramProfile?.telegram_user_id}</strong>
+                  <strong>
+                    {telegramProfile?.telegram_user_id ??
+                      telegramProfile?.chat_id}
+                  </strong>
                 </p>
                 <p className="landing-card-text">
                   Вы будете получать уведомления о задачах и дедлайнах в
@@ -295,23 +374,37 @@ export const ProfilePage = () => {
               </>
             ) : (
               <p className="landing-card-text">
-                Telegram ещё не подтверждён. Без подтверждения бот не сможет
-                отправлять вам уведомления.
+                Telegram ещё не подтверждён. Нажмите кнопку ниже, перейдите в
+                бота и нажмите /start, затем вернитесь и обновите статус.
               </p>
             )}
 
+            {telegramError && (
+              <p className="form-error-text">{telegramError}</p>
+            )}
+            {telegramMessage && (
+              <p className="form-success-text">{telegramMessage}</p>
+            )}
+
             <div className="profile-telegram-actions">
-              <Button type="button" onClick={handleOpenTelegram} fullWidth>
-                Открыть бота в Telegram
+              <Button
+                type="button"
+                onClick={handleTelegramConnect}
+                fullWidth
+                loading={telegramLinkLoading}
+              >
+                {telegramLinkLoading
+                  ? "Получаем ссылку…"
+                  : telegramLinked
+                  ? "Перепривязать Telegram"
+                  : "Привязать Telegram"}
               </Button>
               <Button
                 type="button"
-                onClick={handleTelegramConfirm}
+                onClick={handleTelegramRefresh}
                 fullWidth
               >
-                {telegramLinked
-                  ? "Обновить статус Telegram"
-                  : "Подтвердить Telegram"}
+                Обновить статус Telegram
               </Button>
             </div>
           </div>
@@ -319,4 +412,4 @@ export const ProfilePage = () => {
       </div>
     </div>
   );
-}
+};
