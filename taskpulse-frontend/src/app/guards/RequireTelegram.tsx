@@ -11,24 +11,30 @@ export const RequireTelegram = () => {
   const { data: tgProfile, isLoading } = useTelegramProfile();
   const [redirected, setRedirected] = useState(false);
 
-  // если пользователь не залогинен — обычный редирект на логин
+  // если пользователь не залогинен или нет токена — на логин
   if (!auth?.user || !auth.token) {
     return <Navigate to={ROUTES.login} replace />;
   }
 
+  // здесь TypeScript уже знает, что токен точно есть
+  const token = auth.token as string;
+
   useEffect(() => {
-    // пока идёт запрос профиля или уже совершали редирект — ничего не делаем
     if (isLoading || redirected) return;
 
-    // если Telegram ещё не привязан → отправляем в /api/integrations/telegram/connect/
+    // если Telegram ещё не привязан → отправляем в connect-эндпоинт
     if (tgProfile === null) {
       setRedirected(true);
-      // Браузер делает GET-запрос, а дальше backend уже редиректит в Telegram-бота
-      window.location.href = "/api/integrations/telegram/connect/";
-    }
-  }, [isLoading, tgProfile, redirected]);
 
-  // пока проверяем/редиректим — показываем заглушку «Привязка Telegram»
+      const qs = new URLSearchParams({ token }).toString();
+
+      // backend (telegram_connect_start) по этому токену найдёт пользователя
+      // и сделает redirect в https://t.me/<bot>?start=<link_token>
+      window.location.href = `/api/integrations/telegram/connect/?${qs}`;
+    }
+  }, [isLoading, tgProfile, redirected, token]);
+
+  // пока проверяем / делаем редирект — показываем заглушку
   if (isLoading || tgProfile === null || redirected) {
     return (
       <div className="page-centered">
@@ -43,6 +49,6 @@ export const RequireTelegram = () => {
     );
   }
 
-  // Telegram-профиль есть → пускаем дальше в /app/*
+  // Telegram-профиль есть → пускаем дальше
   return <Outlet />;
 };
