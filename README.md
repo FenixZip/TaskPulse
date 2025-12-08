@@ -46,7 +46,7 @@ npm run build
 cp -r ~/opt/taskpulse/TaskPulse/taskpulse-frontend/dist/* /var/www/taskpulse_frontend/
 
 
-_nginx -t
+nginx -t
 systemctl reload nginx_
 
 
