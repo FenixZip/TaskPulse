@@ -5,38 +5,31 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { ROUTES } from "../../shared/config/routes";
 import { useTelegramProfile } from "../../shared/hooks/useTelegramProfile";
-import { getTelegramConnectLink } from "../../entities/integrations/model/telegramApi";
 
 export const RequireTelegram = () => {
   const { auth } = useAuth();
   const { data: tgProfile, isLoading } = useTelegramProfile();
-  const [redirecting, setRedirecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [redirected, setRedirected] = useState(false);
 
-  // если не залогинен — обычный редирект на логин
+  // если пользователь не залогинен — обычный редирект на логин
   if (!auth?.user || !auth.token) {
     return <Navigate to={ROUTES.login} replace />;
   }
 
   useEffect(() => {
-    if (isLoading || redirecting) return;
+    // пока идёт запрос профиля или уже совершали редирект — ничего не делаем
+    if (isLoading || redirected) return;
 
-    // если Telegram ещё не привязан → запрашиваем ссылку и уходим в бота
+    // если Telegram ещё не привязан → отправляем в /api/integrations/telegram/connect/
     if (tgProfile === null) {
-      setRedirecting(true);
-      getTelegramConnectLink()
-        .then((link) => {
-          window.location.href = link;
-        })
-        .catch(() => {
-          setError("Не удалось получить ссылку на Telegram-бота.");
-          setRedirecting(false);
-        });
+      setRedirected(true);
+      // Браузер делает GET-запрос, а дальше backend уже редиректит в Telegram-бота
+      window.location.href = "/api/integrations/telegram/connect/";
     }
-  }, [isLoading, tgProfile, redirecting]);
+  }, [isLoading, tgProfile, redirected]);
 
-  // пока проверяем/редиректим — ничего из приложения не показываем
-  if (isLoading || redirecting || tgProfile === null) {
+  // пока проверяем/редиректим — показываем заглушку «Привязка Telegram»
+  if (isLoading || tgProfile === null || redirected) {
     return (
       <div className="page-centered">
         <div className="auth-card">
@@ -45,16 +38,11 @@ export const RequireTelegram = () => {
             Мы отправляем вас в Telegram-бота Pulse-zone, чтобы привязать
             аккаунт. После привязки вернитесь в браузер и обновите страницу.
           </p>
-          {error && (
-            <p className="text-xs text-red-400" style={{ marginTop: "8px" }}>
-              {error}
-            </p>
-          )}
         </div>
       </div>
     );
   }
 
-  // Telegram-профиль есть → пускаем дальше
+  // Telegram-профиль есть → пускаем дальше в /app/*
   return <Outlet />;
 };
