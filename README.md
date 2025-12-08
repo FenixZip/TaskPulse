@@ -46,8 +46,8 @@ npm run build
 cp -r ~/opt/taskpulse/TaskPulse/taskpulse-frontend/dist/* /var/www/taskpulse_frontend/
 
 
-nginx -t
-systemctl reload nginx
+_nginx -t
+systemctl reload nginx_
 
 
 grep -R "api/auth" -n src
