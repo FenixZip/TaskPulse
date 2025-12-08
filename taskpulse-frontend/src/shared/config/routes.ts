@@ -6,6 +6,9 @@ export const ROUTES = {
   register: "/auth/register",
   resetPasswordRequest: "/auth/reset-password",
 
+  // новая страница приёма инвайта
+  acceptInvite: "/invite/accept",
+
   appRoot: "/app",
 
   // Вкладки в шапке

@@ -11,6 +11,7 @@ import { LandingPage } from "../pages/landing/LandingPage";
 import { LoginPage } from "../pages/auth/LoginPage";
 import { RegisterPage } from "../pages/auth/RegisterPage";
 import { ResetPasswordRequestPage } from "../pages/auth/ResetPasswordRequestPage";
+import { AcceptInvitePage } from "../pages/auth/AcceptInvitePage";
 
 import { DashboardHomePage } from "../pages/dashboard/DashboardHomePage";
 import { ProfilePage } from "../pages/profile/ProfilePage";
@@ -38,6 +39,11 @@ export const AppRouter = () => {
             path="reset-password"
             element={<ResetPasswordRequestPage />}
           />
+        </Route>
+
+        {/* приём инвайта по ссылке из письма */}
+        <Route path="invite">
+          <Route path="accept" element={<AcceptInvitePage />} />
         </Route>
 
         {/* приватная зона */}
