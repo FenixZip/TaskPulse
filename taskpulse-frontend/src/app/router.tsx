@@ -43,8 +43,6 @@ export const AppRouter = () => {
             path="reset-password"
             element={<ResetPasswordRequestPage />}
           />
-          {/* если потом захочешь сделать confirm/verify-email —
-              просто добавим сюда ещё роуты */}
         </Route>
 
         {/* ссылка из email-приглашения */}
@@ -60,7 +58,6 @@ export const AppRouter = () => {
               {/* /app → редирект по роли (creator/executor) */}
               <Route index element={<AppRootRedirect />} />
 
-              {/* Дашборд как отдельная страница, если нужно */}
               <Route path="home" element={<DashboardHomePage />} />
 
               {/* вкладки */}

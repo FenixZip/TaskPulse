@@ -1,4 +1,5 @@
-"""integrations/views_api.py"""
+"""TaskPulse/integrations/views_api.py"""
+
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 
@@ -13,23 +14,21 @@ from rest_framework.views import APIView
 
 class TelegramProfileViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """
-    Вьюсет только для «мой телеграм-профиль».
+    Вьюсет только для «моего телеграм-профиля».
 
     URL: /api/integrations/telegram/profile/
-    Всегда возвращает профиль текущего пользователя, если он есть.
+
+    Возвращает профиль Telegram текущего пользователя, если он существует.
     """
 
     serializer_class = TelegramProfileSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
-        """Либо вернём профиль, либо вызовем 404."""
-
+        """Всегда ищем профиль по текущему пользователю, pk не нужен."""
         return get_object_or_404(TelegramProfile, user=self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
-        """Переопределяем retrieve, чтобы не требовать pk в URL."""
-
         obj = self.get_object()
         serializer = self.get_serializer(obj)
         return Response(serializer.data)
@@ -43,9 +42,6 @@ class TelegramLinkStartView(APIView):
     и возвращает deep-link на бота:
 
         https://t.me/<TELEGRAM_BOT_NAME>?start=<token>
-
-    Без корректно настроенного TELEGRAM_BOT_NAME в settings
-    эндпоинт вернёт 500.
     """
 
     permission_classes = [IsAuthenticated]
