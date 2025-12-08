@@ -2,19 +2,19 @@
 import { Navigate, Outlet } from "react-router-dom";
 
 import { useAuth } from "../../shared/hooks/useAuth";
-import { ROUTES } from "../../shared/config/routes";
 import { useTelegramProfile } from "../../shared/hooks/useTelegramProfile";
+import { ROUTES } from "../../shared/config/routes";
 
 export const RequireTelegram = () => {
   const { auth } = useAuth();
   const { data: telegramProfile, isLoading } = useTelegramProfile();
 
-  // Не залогинен -> на страницу логина
+  // Не залогинен -> отправляем на логин
   if (!auth?.user || !auth.token) {
     return <Navigate to={ROUTES.login} replace />;
   }
 
-  // Пока узнаём статус Telegram — показываем заглушку
+  // Пока грузим статус Telegram — показываем заглушку
   if (isLoading) {
     return (
       <div className="page-centered">
@@ -28,10 +28,10 @@ export const RequireTelegram = () => {
     );
   }
 
-  // Telegram не привязан -> отправляем в профиль,
-  // где есть кнопка «Привязать Telegram»
+  // Telegram не привязан -> отправляем на страницу профиля,
+  // где теперь есть кнопка «Привязать Telegram»
   if (!telegramProfile) {
-    return <Navigate to={ROUTES.profile} replace />;
+    return <Navigate to="/app/profile" replace />;
   }
 
   // Всё ок — пускаем дальше
