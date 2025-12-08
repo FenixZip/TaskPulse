@@ -6,6 +6,12 @@ docker compose up -d
 docker logs -f taskpulse-web
 
 
+export TELEGRAM_BOT_TOKEN="8219195501:AAH9WLtZiEp5Reez1FUoXN2fv6UvKQGFi2k"
+export TELEGRAM_WEBHOOK_SECRET="some-long-random-secret"
+curl "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo"
+curl "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+  -d "url=https://pulse-zone.tech/api/integrations/telegram/webhook/${TELEGRAM_WEBHOOK_SECRET}/"
+
 
 python manage.py flush
 curl "http://localhost:8000/api/auth/verify-email/?token=92424c72-751b-4a0f-8fcd-457dc2619b1d"
