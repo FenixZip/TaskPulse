@@ -11,6 +11,7 @@ export TELEGRAM_WEBHOOK_SECRET="some-long-random-secret"
 curl "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo"
 curl "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
   -d "url=https://pulse-zone.tech/api/integrations/telegram/webhook/${TELEGRAM_WEBHOOK_SECRET}/"
+docker exec -it taskpulse-web env | grep TELEGRAM_WEBHOOK_SECRET
 
 
 python manage.py flush
