@@ -3,9 +3,7 @@ import { apiClient } from "../../../shared/lib/apiClient";
 import type { TelegramProfile } from "./telegramTypes";
 
 /**
- * Возвращает профиль Telegram.
- * Если пользователя ещё не привязали — Backend отдаёт 404.
- * В этом случае возвращаем null и считаем, что Telegram не подтверждён.
+ * Профиль Telegram текущего пользователя.
  */
 export const getTelegramProfile = async (): Promise<TelegramProfile | null> => {
   try {
@@ -19,4 +17,14 @@ export const getTelegramProfile = async (): Promise<TelegramProfile | null> => {
     }
     throw error;
   }
+};
+
+/**
+ * Запрашивает у backend deep-link для привязки Telegram.
+ */
+export const getTelegramConnectLink = async (): Promise<string> => {
+  const { data } = await apiClient.post<{ link: string }>(
+    "/api/integrations/telegram/link-start/",
+  );
+  return data.link;
 };

@@ -12,7 +12,7 @@ router = DefaultRouter()
 # /api/integrations/telegram/profile/
 router.register(
     r"integrations/telegram/profile",
-    TelegramProfileViewSet,
+TelegramProfileViewSet,
     basename="telegram-profile",
 )
 
@@ -25,7 +25,7 @@ urlpatterns += router.urls
 # в итоге: /api/telegram/webhook/
 urlpatterns += [
     path(
-        "telegram/webhook/",
+    "telegram/webhook/",
         TelegramWebhookView.as_view(),
         name="telegram-webhook",
     ),

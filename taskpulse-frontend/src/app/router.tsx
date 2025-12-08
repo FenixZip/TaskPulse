@@ -5,6 +5,7 @@ import { RootLayout } from "./layouts/RootLayout";
 import { DashboardLayout } from "./layouts/DashboardLayout";
 
 import { RequireAuth } from "./guards/RequireAuth";
+import { RequireTelegram } from "./guards/RequireTelegram";
 
 import { LandingPage } from "../pages/landing/LandingPage";
 
@@ -14,16 +15,19 @@ import { ResetPasswordRequestPage } from "../pages/auth/ResetPasswordRequestPage
 import { AcceptInvitePage } from "../pages/auth/AcceptInvitePage";
 
 import { DashboardHomePage } from "../pages/dashboard/DashboardHomePage";
-import { ProfilePage } from "../pages/profile/ProfilePage";
-import { TaskDetailsPage } from "../pages/tasks/TaskDetailsPage";
-import { ConversationPage } from "../pages/chat/ConversationPage";
-import { ErrorPage } from "../pages/error/ErrorPage";
-import { NotFoundPage } from "../pages/error/NotFoundPage";
-
-// новые страницы под вкладки
 import { TasksPage } from "../pages/dashboard/TasksPage";
 import { ExecutorsPage } from "../pages/dashboard/ExecutorsPage";
 import { StatsPage } from "../pages/dashboard/StatsPage";
+import { AppRootRedirect } from "../pages/dashboard/AppRootRedirect";
+
+import { ProfilePage } from "../pages/profile/ProfilePage";
+
+import { TaskDetailsPage } from "../pages/tasks/TaskDetailsPage";
+
+import { ConversationPage } from "../pages/chat/ConversationPage";
+
+import { ErrorPage } from "../pages/error/ErrorPage";
+import { NotFoundPage } from "../pages/error/NotFoundPage";
 
 export const AppRouter = () => {
   return (
@@ -39,31 +43,39 @@ export const AppRouter = () => {
             path="reset-password"
             element={<ResetPasswordRequestPage />}
           />
+          {/* если потом захочешь сделать confirm/verify-email —
+              просто добавим сюда ещё роуты */}
         </Route>
 
-        {/* приём инвайта по ссылке из письма */}
+        {/* ссылка из email-приглашения */}
         <Route path="invite">
           <Route path="accept" element={<AcceptInvitePage />} />
         </Route>
 
         {/* приватная зона */}
         <Route element={<RequireAuth />}>
-          <Route path="app" element={<DashboardLayout />}>
-            {/* главная страница /app — можно оставить как "домик" */}
-            <Route index element={<DashboardHomePage />} />
+          {/* всё приложение требует привязанный Telegram */}
+          <Route element={<RequireTelegram />}>
+            <Route path="app" element={<DashboardLayout />}>
+              {/* /app → редирект по роли (creator/executor) */}
+              <Route index element={<AppRootRedirect />} />
 
-            {/* вкладки */}
-            <Route path="tasks" element={<TasksPage />} />
-            <Route path="executors" element={<ExecutorsPage />} />
-            <Route path="stats" element={<StatsPage />} />
+              {/* Дашборд как отдельная страница, если нужно */}
+              <Route path="home" element={<DashboardHomePage />} />
 
-            <Route path="profile" element={<ProfilePage />} />
+              {/* вкладки */}
+              <Route path="tasks" element={<TasksPage />} />
+              <Route path="executors" element={<ExecutorsPage />} />
+              <Route path="stats" element={<StatsPage />} />
 
-            {/* детальная задача */}
-            <Route path="tasks/:taskId" element={<TaskDetailsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
 
-            {/* чат создатель ↔ исполнитель */}
-            <Route path="chat/:userId" element={<ConversationPage />} />
+              {/* детальная задача */}
+              <Route path="tasks/:taskId" element={<TaskDetailsPage />} />
+
+              {/* чат создатель ↔ исполнитель */}
+              <Route path="chat/:userId" element={<ConversationPage />} />
+            </Route>
           </Route>
         </Route>
 

@@ -43,6 +43,6 @@ def build_task_link(task_id: int) -> str:
     """Строит ссылку на задачу на фронтенде, чтобы вставить в сообщения Telegram."""
 
     # берём базовый URL фронтенда из настроек
-    base = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000")
-    # ⬇️ просто конкатенируем путь до задачи
-    return f"{base}/tasks/{task_id}"
+    base = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
+    # задачи открываются внутри SPA по /app/tasks/<id>
+    return f"{base}/app/tasks/{task_id}"
