@@ -5,11 +5,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from django.conf import settings
-from django.http import (
-    HttpRequest,
-    JsonResponse,
-    HttpResponseForbidden,
-)
+from django.http import HttpRequest, JsonResponse, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import TelegramProfile, TelegramLinkToken
@@ -19,12 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def _extract_message(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """
-    Достаём message из update.
-    Telegram может прислать message, edited_message, callback_query.message и т.п.
-    Нас интересует обычное текстовое сообщение.
-    """
-
+    """Достаём message из update (message / edited_message / callback_query.message)."""
     if "message" in payload:
         return payload["message"]
     if "edited_message" in payload:
@@ -43,19 +34,15 @@ def telegram_webhook(request: HttpRequest, secret: str):
 
     URL: /api/integrations/telegram/webhook/<secret>/
 
-    1. Проверяем secret.
-    2. Принимаем только POST.
-    3. Разбираем JSON-апдейт.
-    4. Обрабатываем команду /start <token>:
-       - находим TelegramLinkToken по token;
-       - помечаем его использованным;
-       - создаём/обновляем TelegramProfile;
-       - отправляем подтверждение пользователю.
-    5. /help — отправляем подсказку.
-    6. Всё остальное — просто {"ok": true}, без 500.
+    - Проверяем secret.
+    - Принимаем только POST.
+    - Обрабатываем /start <token> и /start без токена.
+      Если токена нет — пытаемся взять последний неиспользованный TelegramLinkToken.
+    - По токену находим пользователя, создаём/обновляем TelegramProfile и
+      отвечаем "✅ Telegram успешно привязан ...".
     """
 
-    # 1. секрет
+    # 1. секрет в URL
     if secret != settings.TELEGRAM_WEBHOOK_SECRET:
         return HttpResponseForbidden("Invalid secret")
 
@@ -73,35 +60,51 @@ def telegram_webhook(request: HttpRequest, secret: str):
 
         message = _extract_message(payload)
         if not message:
-            # ничего интересного — просто подтверждаем
             return JsonResponse({"ok": True})
 
         chat = message.get("chat") or {}
         chat_id = chat.get("id")
         text = (message.get("text") or "").strip()
 
-        # если нет chat_id — это какая-то странная сущность, пропускаем
         if chat_id is None:
             return JsonResponse({"ok": True})
 
-        # 4. /start с токеном
+        # 4. /start [token]
         if text.startswith("/start"):
             parts = text.split(maxsplit=1)
-            if len(parts) == 1:
-                # /start без параметра — просто приветствие
+
+            start_token: Optional[str] = None
+
+            # /start <token> — нормальный сценарий
+            if len(parts) == 2:
+                start_token = parts[1]
+            else:
+                # /start без токена — пробуем взять последний неиспользованный link-token
+                try:
+                    pending_tokens = list(
+                        TelegramLinkToken.objects.filter(is_used=False)
+                        .order_by("-created_at")[:2]
+                    )
+                    if len(pending_tokens) == 1:
+                        start_token = str(pending_tokens[0].token)
+                except Exception:  # noqa: BLE001
+                    logger.exception("Failed to select fallback TelegramLinkToken")
+
+            if not start_token:
+                # вообще нет токена — просто показываем стандартное приветствие
                 send_telegram_message(
                     chat_id,
-                    "👋 Это бот Pulse-zone. Для привязки аккаунта зайдите на сайт и "
-                    "нажмите кнопку «Привязать Telegram».",
+                    "👋 Это бот Pulse-zone. Для привязки аккаунта зайдите на сайт "
+                    "и нажмите кнопку «Привязать Telegram».",
                 )
                 return JsonResponse({"ok": True})
 
-            start_token = parts[1]
-
+            # пробуем найти TelegramLinkToken по токену
             try:
-                link = TelegramLinkToken.objects.select_related("user").get(
-                    token=start_token,
-                    is_used=False,
+                link = (
+                    TelegramLinkToken.objects
+                    .select_related("user")
+                    .get(token=start_token, is_used=False)
                 )
             except TelegramLinkToken.DoesNotExist:
                 send_telegram_message(
@@ -116,21 +119,11 @@ def telegram_webhook(request: HttpRequest, secret: str):
 
             user = link.user
 
-            # создаём/обновляем TelegramProfile
+            # создаём/обновляем TelegramProfile для этого пользователя
             profile, _ = TelegramProfile.objects.get_or_create(user=user)
-            # предполагаем, что в модели есть эти поля
             profile.telegram_user_id = chat_id
             profile.chat_id = chat_id
-            profile.is_confirmed = True
-            profile.connect_token = None
-            profile.save(
-                update_fields=[
-                    "telegram_user_id",
-                    "chat_id",
-                    "is_confirmed",
-                    "connect_token",
-                ]
-            )
+            profile.save(update_fields=["telegram_user_id", "chat_id"])
 
             send_telegram_message(
                 chat_id,
@@ -138,7 +131,7 @@ def telegram_webhook(request: HttpRequest, secret: str):
             )
             return JsonResponse({"ok": True})
 
-        # 5. /help
+        # /help
         if text == "/help":
             send_telegram_message(
                 chat_id,
@@ -146,10 +139,10 @@ def telegram_webhook(request: HttpRequest, secret: str):
             )
             return JsonResponse({"ok": True})
 
-        # 6. всё остальное игнорируем
+        # все остальные сообщения игнорируем
         return JsonResponse({"ok": True})
 
-    except Exception:  # pylint: disable=broad-except
-        # Ловим любые ошибки, чтобы НИКОГДА не возвращать 500 Telegram-у.
+    except Exception:  # noqa: BLE001
+        # Никогда не роняем вебхук 500-кой — просто логируем.
         logger.exception("Error while handling Telegram webhook")
         return JsonResponse({"ok": True})
