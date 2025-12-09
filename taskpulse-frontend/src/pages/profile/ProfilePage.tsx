@@ -56,10 +56,9 @@ export const ProfilePage = () => {
     return undefined;
   }, [avatarFile]);
 
-  // 🔴 Единственное логическое изменение:
-  // раньше было: const telegramLinked = !!telegramProfile;
-  // теперь учитываем именно наличие telegram_user_id
+  // ⬇⬇⬇ ЕДИНСТВЕННОЕ ЛОГИЧЕСКОЕ ИЗМЕНЕНИЕ
   const telegramLinked = !!telegramProfile?.telegram_user_id;
+  // ⬆⬆⬆ Раньше было: const telegramLinked = !!telegramProfile;
 
   if (isLoading) {
     return (
@@ -172,10 +171,10 @@ export const ProfilePage = () => {
     }
   };
 
-  const handleTelegramRefresh = () => {
+  const handleTelegramRefresh = async () => {
     setTelegramError(null);
     setTelegramMessage(null);
-    refetchTelegram();
+    await refetchTelegram();
   };
 
   return (
