@@ -1,5 +1,5 @@
 // src/app/guards/RequireTelegram.tsx
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useTelegramProfile } from "../../shared/hooks/useTelegramProfile";
@@ -7,6 +7,7 @@ import { ROUTES } from "../../shared/config/routes";
 
 export const RequireTelegram = () => {
   const { auth } = useAuth();
+  const location = useLocation();
   const {
     data: telegramProfile,
     isLoading,
@@ -29,21 +30,18 @@ export const RequireTelegram = () => {
     );
   }
 
-  // В случае ошибки подстрахуемся и отправим на профиль,
-  // там пользователь сможет инициировать привязку ещё раз
-  if (isError) {
-    return <Navigate to="/app/profile" replace />;
-  }
-
-  // Telegram считаем подтверждённым только если есть реальный ID
+  // Если случилась ошибка при запросе профиля Telegram —
+  // считаем, что он не подтверждён.
   const telegramConfirmed = !!telegramProfile?.telegram_user_id;
+  const isProfilePage = location.pathname.startsWith("/app/profile");
 
-  // Telegram не привязан/не подтверждён -> отправляем на страницу профиля,
-  // где есть блок с привязкой и кнопкой «Привязать/обновить Telegram»
-  if (!telegramConfirmed) {
+  // Если Telegram не подтверждён и мы НЕ на странице профиля —
+  // отправляем пользователя в профиль, где есть блок привязки
+  if ((!telegramConfirmed || isError) && !isProfilePage) {
     return <Navigate to="/app/profile" replace />;
   }
 
-  // Всё ок — пускаем дальше
+  // На /app/profile пускаем всегда (если залогинен),
+  // чтобы пользователь мог привязать Telegram.
   return <Outlet />;
 };
