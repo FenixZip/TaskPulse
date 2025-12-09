@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { TasksList } from "../../features/tasks/list/ui/TasksList";
-import { CreateTaskModal } from "../../features/tasks/create-task/ui/CreateTaskModal";
+import { CreateTaskForm } from "../../features/tasks/create-task/ui/CreateTaskForm";
 
 type NormalizedRole = "creator" | "executor" | null;
 
@@ -17,7 +17,7 @@ export const TasksPage = () => {
   const { auth } = useAuth();
   const role = normalizeRole(auth.user?.role);
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
 
   if (!role) {
     return (
@@ -38,29 +38,26 @@ export const TasksPage = () => {
           <div>
             <h1 className="page-title">Задачи</h1>
             <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-xl">
-              Управляйте задачами для исполнителей, используйте фильтры и
-              назначайте новые задачи.
+              Управляйте задачами для исполнителей и назначайте новые.
             </p>
           </div>
           <button
             type="button"
             className="app-nav-link app-nav-link-primary"
-            onClick={() => setIsCreateOpen(true)}
+            onClick={() => setShowCreate((prev) => !prev)}
           >
-            + Назначить задачу
+            {showCreate ? "Скрыть форму" : "+ Назначить задачу"}
           </button>
         </div>
 
-        <div className="mt-4">
-          <TasksList mode="creator" />
-        </div>
+        <TasksList mode="creator" />
 
-        <CreateTaskModal
-          isOpen={isCreateOpen}
-          onClose={() => setIsCreateOpen(false)}
-          assigneeId={null}
-          assigneeName={null}
-        />
+        {showCreate && (
+          <CreateTaskForm
+            assigneeId={null}
+            onCreated={() => setShowCreate(false)}
+          />
+        )}
       </div>
     );
   }
@@ -74,9 +71,7 @@ export const TasksPage = () => {
         уточняйте детали с создателем.
       </p>
 
-      <div className="mt-4">
-        <TasksList mode="executor" />
-      </div>
+      <TasksList mode="executor" />
     </div>
   );
 };
