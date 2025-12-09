@@ -7,9 +7,9 @@ from django.dispatch import receiver
 from tasks.models import Task, TaskMessage
 from tasks.tasks_reminders import (
     send_task_assigned_notification,
-    send_task_completed_notification,
     send_new_task_message_notification,
 )
+from tasks.services.notifications import notify_task_completed
 
 
 # === Task: создание и смена статуса ===
@@ -36,11 +36,11 @@ def store_old_status(sender, instance: Task, **kwargs) -> None:  # noqa: ANN001
 @receiver(post_save, sender=Task)
 def task_post_save(sender, instance: Task, created: bool, **kwargs) -> None:  # noqa: ANN001
     """
-    - При создании задачи с исполнителем → уведомляем исполнителя.
-    - При смене статуса на DONE → уведомляем создателя.
+    - При создании задачи с исполнителем → уведомляем исполнителя (через Celery).
+    - При смене статуса на DONE → уведомляем создателя (СИНХРОННО).
     """
 
-    # 1) Новая задача → уведомляем исполнителя
+    # 1) Новая задача → уведомляем исполнителя (как и было, через Celery)
     if created and instance.assignee_id:
         send_task_assigned_notification.delay(instance.pk)
         return
@@ -51,7 +51,10 @@ def task_post_save(sender, instance: Task, created: bool, **kwargs) -> None:  # 
         new_status = instance.status
 
         if old_status != new_status and new_status == Task.Status.DONE:
-            send_task_completed_notification.delay(instance.pk)
+            # Раньше здесь было:
+            # send_task_completed_notification.delay(instance.pk)
+            # Теперь шлём уведомление напрямую — без Celery
+            notify_task_completed(instance)
 
 
 # === TaskMessage: новое сообщение в чате ===
@@ -59,7 +62,7 @@ def task_post_save(sender, instance: Task, created: bool, **kwargs) -> None:  # 
 
 @receiver(post_save, sender=TaskMessage)
 def task_message_post_save(
-        sender, instance: TaskMessage, created: bool, **kwargs  # noqa: ANN001
+    sender, instance: TaskMessage, created: bool, **kwargs  # noqa: ANN001
 ) -> None:
     """
     При создании нового сообщения в чате по задаче
