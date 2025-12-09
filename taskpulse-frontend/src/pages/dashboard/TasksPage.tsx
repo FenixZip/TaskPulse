@@ -24,8 +24,8 @@ export const TasksPage = () => {
       <div className="page">
         <h1 className="page-title">Задачи</h1>
         <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-xl">
-          Ваша роль ещё не определена. Пожалуйста, обновите страницу или
-          войдите заново.
+          Ваша роль ещё не определена. Пожалуйста, обновите страницу или войдите
+          заново.
         </p>
       </div>
     );

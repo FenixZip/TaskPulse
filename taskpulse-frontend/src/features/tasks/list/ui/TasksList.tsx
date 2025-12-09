@@ -11,7 +11,6 @@ interface TasksListProps {
   mode: "creator" | "executor";
 }
 
-type StatusFilter = "all" | "new" | "in_progress" | "done" | "overdue";
 type PriorityFilter = "all" | TaskPriority;
 
 const formatDateTime = (value: string | null) => {
@@ -39,47 +38,35 @@ const PriorityBadge = ({ priority }: { priority: TaskPriority }) => {
     "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ";
 
   if (priority === "high") {
-    cls +=
-      "bg-red-500/15 text-red-200 border border-red-500/40";
+    cls += "bg-red-500/15 text-red-200 border border-red-500/40";
   } else if (priority === "medium") {
-    cls +=
-      "bg-yellow-500/15 text-yellow-200 border border-yellow-500/40";
+    cls += "bg-yellow-500/15 text-yellow-200 border border-yellow-500/40";
   } else {
-    cls +=
-      "bg-emerald-500/15 text-emerald-200 border border-emerald-500/40";
+    cls += "bg-emerald-500/15 text-emerald-200 border border-emerald-500/40";
   }
 
   return <span className={cls}>{getPriorityLabel(priority)}</span>;
 };
 
 const StatusBadge = ({ status }: { status: Task["status"] }) => {
-  let base =
-    status === "done"
-      ? "Выполнена"
-      : status === "in_progress"
-      ? "В работе"
-      : status === "overdue"
-      ? "Просрочена"
-      : "Новая";
-
+  let label = "Новая";
   let cls =
     "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ";
 
   if (status === "done") {
-    cls +=
-      "bg-emerald-500/15 text-emerald-200 border border-emerald-500/40";
-  } else if (status === "overdue") {
-    cls +=
-      "bg-red-500/15 text-red-200 border border-red-500/40";
+    label = "Выполнена";
+    cls += "bg-emerald-500/15 text-emerald-200 border border-emerald-500/40";
   } else if (status === "in_progress") {
-    cls +=
-      "bg-sky-500/15 text-sky-200 border border-sky-500/40";
+    label = "В работе";
+    cls += "bg-sky-500/15 text-sky-200 border border-sky-500/40";
+  } else if (status === "overdue") {
+    label = "Просрочена";
+    cls += "bg-red-500/15 text-red-200 border border-red-500/40";
   } else {
-    cls +=
-      "bg-zinc-500/15 text-zinc-200 border border-zinc-500/40";
+    cls += "bg-zinc-500/15 text-zinc-200 border border-zinc-500/40";
   }
 
-  return <span className={cls}>{base}</span>;
+  return <span className={cls}>{label}</span>;
 };
 
 export const TasksList = ({ mode }: TasksListProps) => {
@@ -91,23 +78,11 @@ export const TasksList = ({ mode }: TasksListProps) => {
   const searchParams = new URLSearchParams(location.search);
   const assigneeFilterFromUrl = searchParams.get("assignee");
 
-  // Фильтры, которые ты просил
+  // фильтры, которые ты просил
   const [fioQuery, setFioQuery] = useState("");
   const [titleQuery, setTitleQuery] = useState("");
   const [priorityFilter, setPriorityFilter] =
     useState<PriorityFilter>("all");
-
-  // Доп. фильтр по статусу (чтоб было удобно)
-  const [statusFilter, setStatusFilter] =
-    useState<StatusFilter>("all");
-
-  const handleOpenTask = (taskId: number) => {
-    navigate(`/app/tasks/${taskId}`);
-  };
-
-  const handleMarkDone = (taskId: number) => {
-    updateStatusMutation.mutate({ taskId, status: "done" });
-  };
 
   const filteredTasks = useMemo(() => {
     if (!tasks) return [];
@@ -116,16 +91,12 @@ export const TasksList = ({ mode }: TasksListProps) => {
     const titleQ = titleQuery.trim().toLowerCase();
 
     return tasks.filter((task) => {
-      // если когда-нибудь будешь передавать assignee в query (?assignee=1)
+      // фильтр по исполнителю из query (?assignee=)
       if (mode === "creator" && assigneeFilterFromUrl) {
         if (!task.assignee) return false;
         if (String(task.assignee) !== assigneeFilterFromUrl) {
           return false;
         }
-      }
-
-      if (statusFilter !== "all" && task.status !== statusFilter) {
-        return false;
       }
 
       if (
@@ -139,10 +110,8 @@ export const TasksList = ({ mode }: TasksListProps) => {
         mode === "creator"
           ? task.assignee_name || ""
           : task.creator_name || "";
-      if (
-        fioQ &&
-        !personName.toLowerCase().includes(fioQ)
-      ) {
+
+      if (fioQ && !personName.toLowerCase().includes(fioQ)) {
         return false;
       }
 
@@ -155,15 +124,15 @@ export const TasksList = ({ mode }: TasksListProps) => {
 
       return true;
     });
-  }, [
-    tasks,
-    mode,
-    assigneeFilterFromUrl,
-    fioQuery,
-    titleQuery,
-    priorityFilter,
-    statusFilter,
-  ]);
+  }, [tasks, mode, assigneeFilterFromUrl, fioQuery, titleQuery, priorityFilter]);
+
+  const handleOpenTask = (taskId: number) => {
+    navigate(`/app/tasks/${taskId}`);
+  };
+
+  const handleMarkDone = (taskId: number) => {
+    updateStatusMutation.mutate({ taskId, status: "done" });
+  };
 
   if (isLoading) {
     return (
@@ -176,7 +145,7 @@ export const TasksList = ({ mode }: TasksListProps) => {
   if (isError) {
     return (
       <div className="mt-4 text-sm text-red-400">
-        Не удалось загрузить список задач.
+        Не удалось загрузить задачи.
       </div>
     );
   }
@@ -194,8 +163,8 @@ export const TasksList = ({ mode }: TasksListProps) => {
 
   return (
     <div className="mt-4">
-      {/* Фильтры */}
-      <div className="grid gap-3 md:grid-cols-4">
+      {/* Фильтры: ФИО, название, приоритет */}
+      <div className="grid gap-3 md:grid-cols-3">
         <Input
           label="ФИО"
           placeholder="Фильтр по ФИО"
@@ -221,22 +190,6 @@ export const TasksList = ({ mode }: TasksListProps) => {
             <option value="high">Высокий</option>
             <option value="medium">Средний</option>
             <option value="low">Низкий</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span>Статус</span>
-          <select
-            className="rounded-lg border bg-[#020617] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors border-[var(--border-subtle)] focus:border-[var(--accent)]"
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as StatusFilter)
-            }
-          >
-            <option value="all">Все статусы</option>
-            <option value="new">Новая</option>
-            <option value="in_progress">В работе</option>
-            <option value="overdue">Просрочена</option>
-            <option value="done">Выполнена</option>
           </select>
         </label>
       </div>
@@ -267,6 +220,16 @@ export const TasksList = ({ mode }: TasksListProps) => {
                     ? task.assignee_name || "Не указано"
                     : task.creator_name || "Не указано";
 
+                const personCompany =
+                  mode === "creator"
+                    ? task.assignee_company
+                    : task.creator_company;
+
+                const personPosition =
+                  mode === "creator"
+                    ? task.assignee_position
+                    : task.creator_position;
+
                 return (
                   <tr
                     key={task.id}
@@ -287,20 +250,14 @@ export const TasksList = ({ mode }: TasksListProps) => {
                       )}
                     </td>
                     <td className="px-3 py-2 align-top">
-                      <div className="text-sm">
-                        {personName}
-                      </div>
-                      <div className="text-xs text-[var(--text-secondary)]">
-                        {mode === "creator"
-                          ? task.assignee_company || ""
-                          : task.creator_company || ""}
-                        {((mode === "creator"
-                          ? task.assignee_position
-                          : task.creator_position) && " · ")}
-                        {mode === "creator"
-                          ? task.assignee_position || ""
-                          : task.creator_position || ""}
-                      </div>
+                      <div className="text-sm">{personName}</div>
+                      {(personCompany || personPosition) && (
+                        <div className="text-xs text-[var(--text-secondary)]">
+                          {personCompany}
+                          {personCompany && personPosition && " · "}
+                          {personPosition}
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-2 align-top">
                       <PriorityBadge priority={task.priority} />
@@ -324,12 +281,8 @@ export const TasksList = ({ mode }: TasksListProps) => {
                           <Button
                             type="button"
                             variant="ghost"
-                            loading={
-                              updateStatusMutation.isPending
-                            }
-                            onClick={() =>
-                              handleMarkDone(task.id)
-                            }
+                            loading={updateStatusMutation.isPending}
+                            onClick={() => handleMarkDone(task.id)}
                           >
                             Отметить выполненной
                           </Button>
