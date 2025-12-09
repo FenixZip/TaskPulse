@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse, HttpResponseForbidden
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import TelegramProfile, TelegramLinkToken
@@ -14,132 +15,140 @@ from .notifications import send_telegram_message
 logger = logging.getLogger(__name__)
 
 
-def _extract_message(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Достаём message из update (message / edited_message / callback_query.message)."""
-    if "message" in payload:
-        return payload["message"]
-    if "edited_message" in payload:
-        return payload["edited_message"]
-    if "callback_query" in payload:
-        cb = payload["callback_query"]
-        if isinstance(cb, dict) and "message" in cb:
-            return cb["message"]
-    return None
+def _get_setting(name: str, default: Optional[Any] = None) -> Any:
+  """
+  Безопасно читаем настройки, чтобы не падать, если чего-то нет.
+  """
+  return getattr(settings, name, default)
+
+
+def _extract_message(update: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+  """
+  Из апдейта Telegram достаём message/edited_message, если есть.
+  Нас интересуют только текстовые сообщения.
+  """
+  if "message" in update:
+      return update["message"]
+  if "edited_message" in update:
+      return update["edited_message"]
+  return None
 
 
 @csrf_exempt
-def telegram_webhook(request: HttpRequest, secret: str):
-    """
-    Webhook для Telegram.
+def telegram_webhook(request: HttpRequest, secret: str) -> JsonResponse:
+  """
+  Обработчик вебхука Telegram.
 
-    URL: /api/integrations/telegram/webhook/<secret>/
+  URL: /api/integrations/telegram/webhook/<secret>/
 
-    Обрабатываем:
+  - Проверяет secret из настроек.
+  - Обрабатывает команды:
+      /start <link_token>
+      /help
+  - Все остальные сообщения игнорирует.
+  - В случае любой ошибки всегда возвращает { "ok": true },
+    чтобы Telegram не отключал webhook.
+  """
+  expected_secret = _get_setting("TELEGRAM_WEBHOOK_SECRET")
+  if expected_secret and secret != expected_secret:
+      logger.warning("Invalid Telegram webhook secret received")
+      return HttpResponseForbidden("Invalid webhook secret")
 
-      /start <token>  – привязка по токену (из deep-link)
-      /start          – привязка по последнему созданному токену
-    """
+  if request.method != "POST":
+      return JsonResponse({"ok": True})
 
-    # секрет
-    if secret != settings.TELEGRAM_WEBHOOK_SECRET:
-        return HttpResponseForbidden("Invalid secret")
+  try:
+      body_raw = request.body.decode("utf-8")
+      update = json.loads(body_raw)
+  except Exception:  # noqa: BLE001
+      logger.exception("Failed to decode Telegram update")
+      return JsonResponse({"ok": True})
 
-    # Telegram может дёргать GET/HEAD – просто отвечаем ok
-    if request.method != "POST":
-        return JsonResponse({"ok": True})
+  try:
+      message = _extract_message(update)
+      if not message:
+          # нас интересуют только обычные сообщения
+          return JsonResponse({"ok": True})
 
-    try:
-        try:
-            payload = json.loads(request.body.decode("utf-8"))
-        except json.JSONDecodeError:
-            logger.warning("Telegram webhook: invalid JSON")
-            return JsonResponse({"ok": True})
+      chat = message.get("chat", {}) or {}
+      chat_id = chat.get("id")
+      if chat_id is None:
+          # некуда отвечать
+          return JsonResponse({"ok": True})
 
-        message = _extract_message(payload)
-        if not message:
-            return JsonResponse({"ok": True})
+      text = (message.get("text") or "").strip()
+      from_user = message.get("from", {}) or {}
+      tg_user_id = from_user.get("id")
 
-        chat = message.get("chat") or {}
-        chat_id = chat.get("id")
-        text = (message.get("text") or "").strip()
+      # ----- /start -----
+      if text.startswith("/start"):
+          # /start или /start <token>
+          parts = text.split(maxsplit=1)
+          if len(parts) == 1:
+              # просто /start без токена
+              send_telegram_message(
+                  chat_id,
+                  "Привет! Чтобы привязать Telegram к вашему аккаунту TaskPulse, "
+                  "перейдите по ссылке из личного кабинета.",
+              )
+              return JsonResponse({"ok": True})
 
-        if chat_id is None:
-            return JsonResponse({"ok": True})
+          start_token = parts[1]
 
-        # ---------- /start ----------
-        if text.startswith("/start"):
-            parts = text.split(maxsplit=1)
-            start_token: Optional[str] = None
+          try:
+              link = (
+                  TelegramLinkToken.objects
+                  .select_related("user")
+                  .get(token=start_token)
+              )
+          except TelegramLinkToken.DoesNotExist:
+              # Токен не найден или уже удалён
+              send_telegram_message(
+                  chat_id,
+                  "⚠️ Ссылка для привязки недействительна или уже удалена.",
+              )
+              return JsonResponse({"ok": True})
 
-            if len(parts) == 2 and parts[1]:
-                # /start <token> из deep-link
-                start_token = parts[1]
-            else:
-                # /start без параметра — берём последний созданный token
-                try:
-                    last_link = (
-                        TelegramLinkToken.objects
-                        .order_by("-created_at")
-                        .first()
-                    )
-                    if last_link:
-                        start_token = str(last_link.token)
-                except Exception:  # noqa: BLE001
-                    logger.exception("Failed to get last TelegramLinkToken")
+          user = link.user
 
-            if not start_token:
-                send_telegram_message(
-                    chat_id,
-                    "👋 Это бот Pulse-zone. Для привязки аккаунта зайдите на сайт "
-                    "и нажмите кнопку «Привязать Telegram».",
-                )
-                return JsonResponse({"ok": True})
+          # Создаём/обновляем профиль сразу с нужными полями,
+          # чтобы не было NULL в telegram_user_id / chat_id.
+          profile, created = TelegramProfile.objects.update_or_create(
+              user=user,
+              defaults={
+                  "telegram_user_id": tg_user_id,
+                  "chat_id": chat_id,
+                  "last_activity_at": timezone.now(),
+              },
+          )
 
-            # ищем TelegramLinkToken по токену
-            try:
-                link = (
-                    TelegramLinkToken.objects
-                    .select_related("user")
-                    .get(token=start_token)
-                )
-            except TelegramLinkToken.DoesNotExist:
-                send_telegram_message(
-                    chat_id,
-                    "⚠️ Ссылка для привязки недействительна или уже удалена.",
-                )
-                return JsonResponse({"ok": True})
+          # Если в модели есть флаг одноразовости, помечаем токен использованным
+          if hasattr(link, "is_used"):
+              if not link.is_used:
+                  link.is_used = True
+                  link.save(update_fields=["is_used"])
 
-            user = link.user
+          # Отправляем подтверждение в Telegram
+          send_telegram_message(
+              profile.chat_id,
+              "✅ Telegram успешно привязан к вашему аккаунту TaskPulse.\n\n"
+              "Теперь вы будете получать уведомления о задачах и дедлайнах здесь.",
+          )
 
-            # создаём/обновляем профиль
-            profile, _ = TelegramProfile.objects.get_or_create(user=user)
-            profile.telegram_user_id = chat_id
-            profile.chat_id = chat_id
-            profile.save(update_fields=["telegram_user_id", "chat_id"])
+          return JsonResponse({"ok": True})
 
-            # помечаем токен использованным, если есть поле
-            if hasattr(link, "is_used"):
-                link.is_used = True
-                link.save(update_fields=["is_used"])
+      # ----- /help -----
+      if text == "/help":
+          send_telegram_message(
+              chat_id,
+              "Я бот Pulse-zone. Я присылаю уведомления о задачах и напоминаниях 🚀",
+          )
+          return JsonResponse({"ok": True})
 
-            send_telegram_message(
-                chat_id,
-                f"✅ Telegram успешно привязан к аккаунту {user.email}.",
-            )
-            return JsonResponse({"ok": True})
+      # Остальные сообщения просто игнорируем
+      return JsonResponse({"ok": True})
 
-        # ---------- /help ----------
-        if text == "/help":
-            send_telegram_message(
-                chat_id,
-                "Я бот Pulse-zone. Я присылаю уведомления о задачах и напоминаниях 🚀",
-            )
-            return JsonResponse({"ok": True})
-
-        # остальные сообщения игнорируем
-        return JsonResponse({"ok": True})
-
-    except Exception:  # noqa: BLE001
-        logger.exception("Error while handling Telegram webhook")
-        # ВАЖНО: никогда не даём 500 Telegram'у
-        return JsonResponse({"ok": True})
+  except Exception:  # noqa: BLE001
+      logger.exception("Error while handling Telegram webhook")
+      # ВАЖНО: никогда не даём 500 Telegram'у
+      return JsonResponse({"ok": True})
