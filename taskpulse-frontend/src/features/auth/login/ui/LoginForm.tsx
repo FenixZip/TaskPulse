@@ -19,6 +19,10 @@ export const LoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+
+  // состояние блока повторной отправки письма
+  const [showResendForm, setShowResendForm] = useState(false);
+  const [resendEmail, setResendEmail] = useState("");
   const [resendMessage, setResendMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -29,7 +33,7 @@ export const LoginForm = () => {
     try {
       const result = await loginMutation.mutateAsync({ email, password });
 
-      // сохраняем токен и роль в контекст
+      // сохраняем токен и пользователя
       setAuthState({
         token: result.token,
         user: {
@@ -38,11 +42,11 @@ export const LoginForm = () => {
         },
       });
 
-      // ✅ сразу уходим на нужную страницу задач
+      // редирект в личный кабинет в зависимости от роли
       if (result.role === "creator") {
-        navigate(ROUTES.creatorDashboard);   // /app/creator/tasks
+        navigate(ROUTES.creatorDashboard);
       } else {
-        navigate(ROUTES.executorDashboard);  // /app/executor/tasks
+        navigate(ROUTES.executorDashboard);
       }
     } catch (error: any) {
       const message =
@@ -55,14 +59,19 @@ export const LoginForm = () => {
   };
 
   const handleResend = async () => {
-    if (!email) return;
+    if (!resendEmail) return;
     setResendMessage(null);
 
     try {
-      const res = await resendMutation.mutateAsync({ email });
+      const res = await resendMutation.mutateAsync({ email: resendEmail });
       setResendMessage(
-        res.detail || "Письмо отправлено, проверьте почту (включая «Спам»)."
+        res.detail ||
+          "Письмо отправлено, проверьте почту (включая папку «Спам»)."
       );
+
+      // прячем форму после успешной отправки
+      setShowResendForm(false);
+      setResendEmail("");
     } catch (error: any) {
       const msg =
         error?.response?.data?.detail ||
@@ -99,26 +108,7 @@ export const LoginForm = () => {
           required
         />
 
-        <div className="text-xs text-slate-300 space-y-1">
-          <div>Не пришло письмо подтверждения?</div>
-          <button
-            type="button"
-            onClick={handleResend}
-            disabled={resendMutation.isPending || !email}
-            className="text-[var(--accent)] underline disabled:opacity-50"
-          >
-            {resendMutation.isPending
-              ? "Отправляем письмо..."
-              : "Отправить письмо ещё раз"}
-          </button>
-
-          {resendMessage && (
-            <div className="mt-1 text-[var(--muted-text)]">
-              {resendMessage}
-            </div>
-          )}
-        </div>
-
+        {/* Забыли пароль */}
         <div className="text-xs">
           <Link
             to={ROUTES.resetPasswordRequest}
@@ -126,6 +116,64 @@ export const LoginForm = () => {
           >
             Забыли пароль?
           </Link>
+        </div>
+
+        {/* Блок повторной отправки письма подтверждения */}
+        <div className="text-xs text-slate-300 space-y-1">
+          {!showResendForm && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResendForm(true);
+                  setResendMessage(null);
+                }}
+                className="text-[var(--accent)] underline"
+              >
+                Не пришло письмо подтверждения?
+              </button>
+
+              {resendMessage && (
+                <div className="mt-1 text-[var(--text-secondary)]">
+                  {resendMessage}
+                </div>
+              )}
+            </>
+          )}
+
+          {showResendForm && (
+            <div className="mt-2 space-y-2 rounded-2xl border border-[var(--border-subtle)] bg-black/30 p-3">
+              <Input
+                label="E-mail для повторной отправки"
+                type="email"
+                placeholder="you@example.com"
+                value={resendEmail}
+                onChange={(e) => setResendEmail(e.target.value)}
+                required
+              />
+
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  onClick={handleResend}
+                  loading={resendMutation.isPending}
+                >
+                  Отправить письмо ещё раз
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResendForm(false);
+                    setResendEmail("");
+                  }}
+                  className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--accent)]"
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <Button type="submit" fullWidth loading={loginMutation.isPending}>
