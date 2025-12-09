@@ -98,6 +98,12 @@ REST_FRAMEWORK = {
     ],
 }
 
+# УДАЛИТЬ НА ПРОДЕ
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://pulse-zone.tech",
+]
+
 
 # === Celery ===
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")

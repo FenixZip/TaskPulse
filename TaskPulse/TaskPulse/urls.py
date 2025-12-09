@@ -21,7 +21,11 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls")),
 
     # Задачи и отчёты
-    path("api/", include("tasks.urls")),
+    # Эндпоинты задач и отчётов живут под префиксом /api/tasks/
+    #   /api/tasks/                    - список/создание задач
+    #   /api/tasks/{id}/               - детали/редактирование
+    #   /api/tasks/cabinet/...         - кабинеты
+    path("api/tasks/", include("tasks.urls")),
 
     # --- TELEGRAM API для фронта ---
     path(
