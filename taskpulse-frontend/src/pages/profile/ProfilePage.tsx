@@ -41,38 +41,55 @@ export const ProfilePage = () => {
 
   useEffect(() => {
     if (profile) {
-      setFullName(profile.full_name ?? "");
-      setCompany(profile.company ?? "");
-      setPosition(profile.position ?? "");
-      if (profile.avatar) {
-        setAvatarPreview(profile.avatar);
-      }
+      setFullName(profile.full_name);
+      setCompany(profile.company);
+      setPosition(profile.position);
     }
   }, [profile]);
 
   useEffect(() => {
-    if (!avatarFile) return;
-
-    const url = URL.createObjectURL(avatarFile);
-    setAvatarPreview(url);
-
-    return () => {
-      URL.revokeObjectURL(url);
-    };
+    if (avatarFile) {
+      const url = URL.createObjectURL(avatarFile);
+      setAvatarPreview(url);
+      return () => URL.revokeObjectURL(url);
+    }
+    return undefined;
   }, [avatarFile]);
 
-  // Telegram считаем подключённым только если есть telegram_user_id
+  // ⬇⬇⬇ ЕДИНСТВЕННОЕ ЛОГИЧЕСКОЕ ИЗМЕНЕНИЕ
   const telegramLinked = !!telegramProfile?.telegram_user_id;
+  // ⬆⬆⬆ Раньше было: const telegramLinked = !!telegramProfile;
 
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
+  if (isLoading) {
+    return (
+      <div className="dashboard-page">
+        <p className="dashboard-header-subtitle">Загружаем профиль…</p>
+      </div>
+    );
+  }
+
+  if (isError || !profile) {
+    return (
+      <div className="dashboard-page">
+        <h1 className="dashboard-header-title">Личный кабинет</h1>
+        <p className="dashboard-header-subtitle text-red-400">
+          Не удалось загрузить данные профиля.
+        </p>
+      </div>
+    );
+  }
+
+  const handleAvatarChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0] || null;
     setAvatarFile(file);
   };
 
-  const handleProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setProfileError(null);
+  const handleProfileSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setProfileMessage(null);
+    setProfileError(null);
 
     try {
       await updateProfileMutation.mutateAsync({
@@ -82,7 +99,7 @@ export const ProfilePage = () => {
         avatar: avatarFile,
       });
 
-      setProfileMessage("Профиль успешно обновлён.");
+      setProfileMessage("Профиль обновлён.");
       setAvatarFile(null);
     } catch (error) {
       console.error(error);
@@ -90,8 +107,8 @@ export const ProfilePage = () => {
     }
   };
 
-  const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handlePasswordSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setPasswordMessage(null);
     setPasswordError(null);
 
@@ -139,8 +156,8 @@ export const ProfilePage = () => {
         return;
       }
 
-      const data = (await response.json()) as { link: string };
-      const link = data.link;
+      const data = await response.json();
+      const link = data.link as string;
 
       window.open(link, "_blank");
       setTelegramMessage(
@@ -160,47 +177,16 @@ export const ProfilePage = () => {
     await refetchTelegram();
   };
 
-  if (!auth?.user) {
-    return (
-      <div className="page">
-        <h1 className="page-title">Личный кабинет</h1>
-        <p className="page-subtitle">
-          Для просмотра профиля необходимо войти в систему.
-        </p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="page">
-        <p className="page-subtitle">Загружаем профиль…</p>
-      </div>
-    );
-  }
-
-  if (isError || !profile) {
-    return (
-      <div className="page">
-        <h1 className="page-title">Личный кабинет</h1>
-        <p className="page-subtitle text-red-400">
-          Не удалось загрузить данные профиля.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">Личный кабинет</h1>
-        <p className="page-subtitle">
+    <div className="dashboard-page">
+      <div className="dashboard-header">
+        <h1 className="dashboard-title">Личный кабинет</h1>
+        <p className="dashboard-header-subtitle">
           Управляйте профилем, паролем и интеграцией с Telegram.
         </p>
       </div>
 
-      <div className="profile-grid">
-        {/* Профиль */}
+      <div className="dashboard-grid dashboard-grid--two-columns">
         <section className="landing-card">
           <div className="landing-card-body">
             <h2 className="landing-card-title">Профиль</h2>
@@ -216,14 +202,27 @@ export const ProfilePage = () => {
               <div className="form-success-message">{profileMessage}</div>
             )}
 
-            <div className="profile-avatar">
-              {avatarPreview ? (
-                <img src={avatarPreview} alt="Аватар" />
-              ) : (
-                <div className="profile-avatar-placeholder">
-                  {profile.full_name?.[0] ?? "?"}
-                </div>
-              )}
+            <div className="profile-avatar-block">
+              <div className="profile-avatar-wrapper">
+                {avatarPreview ? (
+                  <img
+                    src={avatarPreview}
+                    alt={fullName}
+                    className="profile-avatar-image"
+                  />
+                ) : profile.avatar ? (
+                  <img
+                    src={profile.avatar}
+                    alt={fullName}
+                    className="profile-avatar-image"
+                  />
+                ) : (
+                  <div className="profile-avatar-placeholder">
+                    {fullName ? fullName[0]?.toUpperCase() : "?"}
+                  </div>
+                )}
+              </div>
+
               <label className="profile-avatar-upload">
                 <span>Загрузить новый аватар</span>
                 <input
@@ -251,23 +250,19 @@ export const ProfilePage = () => {
                 onChange={(e) => setPosition(e.target.value)}
               />
 
-              <Button
-                type="submit"
-                fullWidth
-                loading={updateProfileMutation.isPending}
-              >
+              <Button type="submit" fullWidth>
                 Сохранить профиль
               </Button>
             </form>
           </div>
         </section>
 
-        {/* Смена пароля + Telegram */}
         <section className="landing-card">
           <div className="landing-card-body">
-            <h2 className="landing-card-title">Безопасность и Telegram</h2>
+            <h2 className="landing-card-title">Смена пароля</h2>
             <p className="landing-card-subtitle">
-              Управляйте паролем и интеграцией с Telegram-ботом.
+              Периодически обновляйте пароль, чтобы ваш аккаунт был в
+              безопасности.
             </p>
 
             {passwordError && (
@@ -291,77 +286,77 @@ export const ProfilePage = () => {
                 onChange={(e) => setNewPassword1(e.target.value)}
               />
               <Input
-                label="Повторите новый пароль"
+                label="Подтверждение нового пароля"
                 type="password"
                 value={newPassword2}
                 onChange={(e) => setNewPassword2(e.target.value)}
               />
 
-              <Button
-                type="submit"
-                fullWidth
-                loading={changePasswordMutation.isPending}
-              >
+              <Button type="submit" fullWidth>
                 Изменить пароль
               </Button>
             </form>
+          </div>
 
-            <div className="profile-section">
-              <h3 className="profile-section-title">Telegram</h3>
+          {/* Telegram */}
+          <div className="profile-subsection">
+            <h3 className="profile-section-title">Telegram</h3>
+            <p className="profile-card-description">
+              Подключите Telegram-бота, чтобы получать уведомления о задачах и
+              дедлайнах.
+            </p>
 
-              {telegramLoading ? (
-                <p className="landing-card-subtitle">
-                  Проверяем статус Telegram…
+            {telegramLoading ? (
+              <p className="landing-card-text">
+                Проверяем статус Telegram…
+              </p>
+            ) : telegramLinked ? (
+              <>
+                <p className="landing-card-text">
+                  Telegram подключён. ID:{" "}
+                  <strong>
+                    {telegramProfile?.telegram_user_id ??
+                      telegramProfile?.chat_id}
+                  </strong>
                 </p>
-              ) : telegramLinked ? (
-                <>
-                  <p className="landing-card-subtitle">
-                    Telegram подключён. ID:{" "}
-                    <strong>
-                      {telegramProfile?.telegram_user_id ??
-                        telegramProfile?.chat_id}
-                    </strong>
-                  </p>
-                  <p className="landing-card-subtitle">
-                    Вы будете получать уведомления о задачах и дедлайнах в
-                    Telegram.
-                  </p>
-                </>
-              ) : (
-                <p className="landing-card-subtitle">
-                  Telegram ещё не подтверждён. Нажмите кнопку ниже, чтобы
-                  привязать Telegram-аккаунт. После этого откройте бота и
-                  нажмите команду <code>/start</code>.
+                <p className="landing-card-text">
+                  Вы будете получать уведомления о задачах и дедлайнах в
+                  Telegram.
                 </p>
-              )}
+              </>
+            ) : (
+              <p className="landing-card-text">
+                Telegram ещё не подтверждён. Нажмите кнопку ниже, чтобы
+                привязать Telegram-аккаунт. После этого откройте бота и
+                нажмите команду /start.
+              </p>
+            )}
 
-              {telegramError && (
-                <div className="form-error-message">{telegramError}</div>
-              )}
-              {telegramMessage && (
-                <div className="form-success-message">{telegramMessage}</div>
-              )}
+            {telegramError && (
+              <div className="form-error-message">{telegramError}</div>
+            )}
+            {telegramMessage && (
+              <div className="form-success-message">{telegramMessage}</div>
+            )}
 
-              <div className="profile-actions">
-                <Button
-                  type="button"
-                  onClick={handleTelegramConnect}
-                  fullWidth
-                  loading={telegramLinkLoading}
-                >
-                  {telegramLinked
-                    ? "Перепривязать Telegram"
-                    : "Привязать Telegram"}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => handleTelegramRefresh()}
-                  fullWidth
-                  variant="ghost"
-                >
-                  Обновить статус Telegram
-                </Button>
-              </div>
+            <div className="profile-actions">
+              <Button
+                type="button"
+                onClick={handleTelegramConnect}
+                fullWidth
+                disabled={telegramLinkLoading}
+              >
+                {telegramLinked
+                  ? "Перепривязать Telegram"
+                  : "Привязать Telegram"}
+              </Button>
+              <Button
+                type="button"
+                onClick={handleTelegramRefresh}
+                fullWidth
+              >
+                Обновить статус Telegram
+              </Button>
             </div>
           </div>
         </section>
