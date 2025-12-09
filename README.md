@@ -4,6 +4,8 @@ docker compose build web
 docker compose up -d
 
 docker logs -f taskpulse-web
+docker exec -it taskpulse-web python manage.py flush --no-input
+docker exec -it taskpulse-web python manage.py migrate
 
 
 export TELEGRAM_BOT_TOKEN="8219195501:AAH9WLtZiEp5Reez1FUoXN2fv6UvKQGFi2k"

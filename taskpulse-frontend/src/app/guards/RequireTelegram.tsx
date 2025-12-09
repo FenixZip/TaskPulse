@@ -7,30 +7,40 @@ import { ROUTES } from "../../shared/config/routes";
 
 export const RequireTelegram = () => {
   const { auth } = useAuth();
-  const { data: telegramProfile, isLoading } = useTelegramProfile();
+  const {
+    data: telegramProfile,
+    isLoading,
+    isError,
+  } = useTelegramProfile();
 
   // Не залогинен -> отправляем на логин
   if (!auth?.user || !auth.token) {
     return <Navigate to={ROUTES.login} replace />;
   }
 
-  // Пока грузим статус Telegram — показываем заглушку
+  // Пока грузим статус Telegram
   if (isLoading) {
     return (
-      <div className="page-centered">
-        <div className="auth-card">
-          <h1 className="auth-title">Привязка Telegram</h1>
-          <p className="auth-subtitle">
-            Проверяем, привязан ли ваш Telegram-аккаунт…
-          </p>
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="text-sm text-muted-foreground">
+          Загрузка статуса Telegram...
         </div>
       </div>
     );
   }
 
-  // Telegram не привязан -> отправляем на страницу профиля,
-  // где теперь есть кнопка «Привязать Telegram»
-  if (!telegramProfile) {
+  // В случае ошибки подстрахуемся и отправим на профиль,
+  // там пользователь сможет инициировать привязку ещё раз
+  if (isError) {
+    return <Navigate to="/app/profile" replace />;
+  }
+
+  // Telegram считаем подтверждённым только если есть реальный ID
+  const telegramConfirmed = !!telegramProfile?.telegram_user_id;
+
+  // Telegram не привязан/не подтверждён -> отправляем на страницу профиля,
+  // где есть блок с привязкой и кнопкой «Привязать/обновить Telegram»
+  if (!telegramConfirmed) {
     return <Navigate to="/app/profile" replace />;
   }
 

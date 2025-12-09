@@ -1,6 +1,7 @@
 """TaskPulse/integrations/views_api.py"""
 
 from django.conf import settings
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -14,22 +15,23 @@ def telegram_profile(request):
     """
     GET /api/integrations/telegram/profile/
 
-    Возвращает информацию о привязке Telegram.
-    Если профиля нет – возвращает null в data.
+    Возвращает профиль Telegram текущего пользователя.
+    - 200 + объект TelegramProfile, если привязка есть
+    - 404, если Telegram ещё не привязан
     """
     try:
         profile = TelegramProfile.objects.get(user=request.user)
     except TelegramProfile.DoesNotExist:
-        return Response({"data": None})
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
-    return Response(
-        {
-            "data": {
-                "telegram_user_id": profile.telegram_user_id,
-                "chat_id": profile.chat_id,
-            }
-        }
-    )
+    data = {
+        "id": profile.id,
+        "telegram_user_id": profile.telegram_user_id,
+        "chat_id": profile.chat_id,
+        "created_at": profile.created_at,
+        "last_activity_at": profile.last_activity_at,
+    }
+    return Response(data, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])

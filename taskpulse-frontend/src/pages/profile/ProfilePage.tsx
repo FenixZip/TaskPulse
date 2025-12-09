@@ -59,7 +59,7 @@ export const ProfilePage = () => {
     return undefined;
   }, [avatarFile]);
 
-  const telegramLinked = !!telegramProfile;
+  const telegramLinked = !!telegramProfile?.telegram_user_id;
 
   if (isLoading) {
     return (
