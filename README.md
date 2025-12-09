@@ -38,9 +38,6 @@ from integrations.notifications import send_telegram_message
 send_telegram_message(493089867, "Тестовое сообщение от Pulse-zone")
 
 
-
-
-
 docker stop amnezia-xray amnezia-awg
 mkdir -p /var/www/taskpulse_frontend
 cp -r ~/opt/taskpulse/TaskPulse/taskpulse-frontend/dist/* /var/www/taskpulse_frontend/
