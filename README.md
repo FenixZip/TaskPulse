@@ -3,6 +3,12 @@ python manage.py shell
 docker compose build web
 docker compose up -d
 
+npm run build
+cp -r ~/opt/taskpulse/TaskPulse/taskpulse-frontend/dist/* /var/www/taskpulse_frontend/
+
+nginx -t
+systemctl reload nginx
+
 docker logs -f taskpulse-web
 docker exec -it taskpulse-web python manage.py flush --no-input
 docker exec -it taskpulse-web python manage.py migrate
@@ -48,15 +54,6 @@ echo ".env.prod" >> .gitignore
 git rm -r --cached .
 git commit -m "Remove .env.prod from repo and ignore it"
 git push
-
-
-VITE_API_BASE_URL=/api npm run build
-npm run build
-cp -r ~/opt/taskpulse/TaskPulse/taskpulse-frontend/dist/* /var/www/taskpulse_frontend/
-
-
-nginx -t
-systemctl reload nginx
 
 
 grep -R "api/auth" -n src
