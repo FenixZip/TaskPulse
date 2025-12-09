@@ -14,11 +14,11 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import TelegramProfile, TelegramLinkToken
 from .notifications import send_telegram_message
-from tasks.models import Task, TaskMessage  # <-- чат задачи
+from tasks.models import Task, TaskMessage
 
 logger = logging.getLogger(__name__)
 
-# /app/tasks/<id> или /tasks/<id> — под это заточен build_task_link
+# Ищем ссылки вида /tasks/<id> (они уже есть в уведомлениях)
 TASK_LINK_RE = re.compile(r"/tasks/(\d+)")
 
 
@@ -35,10 +35,7 @@ def _extract_message(update: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 def _extract_task_id_from_text(text: str) -> Optional[int]:
-    """
-    Пытаемся вытащить ID задачи из текста уведомления бота.
-    Ожидаем внутри ссылку вида .../tasks/<id>.
-    """
+    """Пытаемся вытащить ID задачи из ссылки .../tasks/<id>."""
     match = TASK_LINK_RE.search(text)
     if not match:
         return None
@@ -54,11 +51,11 @@ def _handle_start_command(
     from_user: Dict[str, Any],
 ) -> None:
     """
-    Обработка /start и /start <token>
+    Обработка /start и /start <token>.
     """
     parts = text.split(maxsplit=1)
 
-    # Просто /start — без токена
+    # Просто /start без токена
     if len(parts) == 1:
         send_telegram_message(
             chat_id,
@@ -96,7 +93,6 @@ def _handle_start_command(
         },
     )
 
-    # если есть флаг одноразовости — отмечаем
     if hasattr(link, "is_used") and not getattr(link, "is_used"):
         link.is_used = True
         link.save(update_fields=["is_used"])
@@ -124,10 +120,9 @@ def _handle_task_chat_message(
     tg_user_id: Optional[int],
 ) -> None:
     """
-    Обычное сообщение (не команда).
+    Обычное сообщение (НЕ команда).
     Если это reply на уведомление по задаче — создаём TaskMessage в БД.
     """
-
     if tg_user_id is None:
         return
 
@@ -135,9 +130,9 @@ def _handle_task_chat_message(
     if not text:
         return
 
-    # Нас интересуют только reply — тогда мы знаем, к какой задаче это относится.
     reply_to = message.get("reply_to_message")
     if not reply_to:
+        # Пользователь пишет не в ответ — подсказываем, как правильно
         send_telegram_message(
             chat_id,
             "Чтобы отправить сообщение в чат задачи, ответьте (Reply) "
@@ -182,11 +177,11 @@ def _handle_task_chat_message(
     # Создаём сообщение в чате задачи
     TaskMessage.objects.create(
         task=task,
-        author=profile.user,
+        sender=profile.user,  # ВАЖНО: поле называется sender
         text=text,
     )
-    # Сигнал post_save TaskMessage сам отправит уведомление второй стороне
-    # через send_new_task_message_notification.
+    # Сигнал post_save TaskMessage вызовет notify_task_message,
+    # и второму участнику придёт уведомление.
 
     send_telegram_message(
         chat_id,
@@ -251,5 +246,5 @@ def telegram_webhook(request: HttpRequest, secret: str) -> JsonResponse:
 
     except Exception:  # noqa: BLE001
         logger.exception("Error while handling Telegram webhook")
-        # Для Telegram важно всегда отвечать 200/ok, иначе он отключит webhook
+        # Telegram важно получать 200/ok, иначе он отключит webhook
         return JsonResponse({"ok": True})

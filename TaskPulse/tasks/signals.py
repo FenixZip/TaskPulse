@@ -5,11 +5,11 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 
 from tasks.models import Task, TaskMessage
-from tasks.tasks_reminders import (
-    send_task_assigned_notification,
-    send_new_task_message_notification,
+from tasks.services.notifications import (
+    notify_task_assigned,
+    notify_task_completed,
+    notify_task_message,
 )
-from tasks.services.notifications import notify_task_completed
 
 
 # === Task: создание и смена статуса ===
@@ -36,24 +36,21 @@ def store_old_status(sender, instance: Task, **kwargs) -> None:  # noqa: ANN001
 @receiver(post_save, sender=Task)
 def task_post_save(sender, instance: Task, created: bool, **kwargs) -> None:  # noqa: ANN001
     """
-    - При создании задачи с исполнителем → уведомляем исполнителя (через Celery).
-    - При смене статуса на DONE → уведомляем создателя (СИНХРОННО).
+    - При создании задачи с исполнителем → уведомляем исполнителя.
+    - При смене статуса на DONE → уведомляем создателя.
+    Все уведомления отправляются синхронно, без Celery.
     """
 
-    # 1) Новая задача → уведомляем исполнителя (как и было, через Celery)
+    # Новая задача → уведомляем исполнителя
     if created and instance.assignee_id:
-        send_task_assigned_notification.delay(instance.pk)
+        notify_task_assigned(instance)
         return
 
-    # 2) Обновление → проверяем смену статуса на DONE
+    # Не новое — проверяем смену статуса
     if not created:
         old_status = getattr(instance, "_old_status", None)
         new_status = instance.status
-
         if old_status != new_status and new_status == Task.Status.DONE:
-            # Раньше здесь было:
-            # send_task_completed_notification.delay(instance.pk)
-            # Теперь шлём уведомление напрямую — без Celery
             notify_task_completed(instance)
 
 
@@ -71,4 +68,4 @@ def task_message_post_save(
     if not created:
         return
 
-    send_new_task_message_notification.delay(instance.pk)
+    notify_task_message(instance)
