@@ -15,32 +15,44 @@ router = DefaultRouter()
 router.register(r"tasks", TaskViewSet, basename="task")
 
 urlpatterns = [
-    # все стандартные эндпоинты TaskViewSet:
-    #   /tasks/ , /tasks/{id}/ и т.п.
+    # Стандартные DRF-роуты для задач:
+    #   /api/tasks/           (список + создание)
+    #   /api/tasks/{id}/      (детали/изменение)
     path("", include(router.urls)),
 
-    # Личные кабинеты
-    path("me/creator/tasks/", CreatorTasksView.as_view(), name="creator-tasks"),
+    # Кабинет Создателя
     path(
-        "me/creator/stats-by-assignee/",
+        "cabinet/creator/tasks/",
+        CreatorTasksView.as_view(),
+        name="creator-tasks",
+    ),
+    path(
+        "cabinet/creator/stats-by-assignee/",
         CreatorStatsByAssigneeView.as_view(),
         name="creator-stats-by-assignee",
     ),
-    path("me/executor/tasks/", ExecutorTasksView.as_view(), name="executor-tasks"),
+
+    # Кабинет Исполнителя
     path(
-        "me/executor/tasks/<int:pk>/",
+        "cabinet/executor/tasks/",
+        ExecutorTasksView.as_view(),
+        name="executor-tasks",
+    ),
+    path(
+        "cabinet/executor/tasks/<int:pk>/",
         ExecutorTaskDetailView.as_view(),
         name="executor-task-detail",
     ),
 
-    # отчёт по задачам за месяц:
-    #   name="reports-monthly" — именно его используют тесты через reverse()
+    # Отчёт по задачам за месяц
     path("reports/monthly/", monthly_report, name="reports-monthly"),
 
-    # Сообщения
+    # === Общий чат создатель ↔ исполнитель ===
+    #   GET  /api/tasks/conversation-messages/?user_id=<id>
+    #   POST /api/tasks/conversation-messages/
     path(
         "tasks/conversation-messages/",
         ConversationMessagesView.as_view(),
         name="task-conversation-messages",
-    )
+    ),
 ]

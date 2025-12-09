@@ -170,7 +170,7 @@ class ConversationMessagesView(APIView):
     POST /api/tasks/conversation-messages/
       data:
         - user_id: id собеседника (создатель/исполнитель)
-        - task: id задачи, к которой относится сообщение
+        - task: id задачи, к которой относится сообщение (опционально)
         - text: текст (опционально)
         - file: файл (опционально, multipart/form-data)
     """
@@ -183,7 +183,7 @@ class ConversationMessagesView(APIView):
 
         if not other_id:
             return Response(
-                {"detail": "Не указан параметр user_id."},
+                {"detail": "Нужно указать user_id."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -203,29 +203,38 @@ class ConversationMessagesView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Все сообщения по задачам, где user и other связаны как creator/assignee
+        # Все сообщения по задачам, где user и other связаны как создатель/исполнитель
         qs = (
             TaskMessage.objects.filter(
                 Q(task__creator=user, task__assignee=other)
                 | Q(task__creator=other, task__assignee=user)
             )
-            .select_related("task", "sender")
-            .order_by("created_at")
+            .select_related("sender", "task")
+            .order_by("created_at", "id")
         )
 
+        # ВАЖНО: даже если сообщений нет — возвращаем 200 и []
         serializer = TaskMessageSerializer(
             qs, many=True, context={"request": request}
         )
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         user = request.user
         other_id = request.data.get("user_id")
         task_id = request.data.get("task")
 
-        if not other_id or not task_id:
+        if not other_id:
             return Response(
-                {"detail": "Нужно указать user_id и task."},
+                {"detail": "Нужно указать user_id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            other_id = int(other_id)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "Некорректный user_id."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -237,15 +246,44 @@ class ConversationMessagesView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        try:
-            task = Task.objects.get(pk=task_id)
-        except Task.DoesNotExist:
-            return Response(
-                {"detail": "Задача не найдена."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        # --- выбираем задачу ---
+        task: Task | None = None
 
-        # проверяем, что эта задача действительно между текущим пользователем и other
+        if task_id:
+            try:
+                task_id_int = int(task_id)
+            except (TypeError, ValueError):
+                return Response(
+                    {"detail": "Некорректный task."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            try:
+                task = Task.objects.get(pk=task_id_int)
+            except Task.DoesNotExist:
+                return Response(
+                    {"detail": "Задача не найдена."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+        else:
+            # Если task не передали — пробуем найти единственную общую задачу
+            tasks_qs = Task.objects.filter(
+                Q(creator=user, assignee=other)
+                | Q(creator=other, assignee=user)
+            )
+            count = tasks_qs.count()
+            if count == 0:
+                return Response(
+                    {"detail": "Нет общей задачи для чата."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            elif count > 1:
+                return Response(
+                    {"detail": "Нужно явно указать task для сообщения."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            task = tasks_qs.first()
+
+        # --- проверяем доступ ---
         if not (
             (task.creator_id == user.id and task.assignee_id == other.id)
             or (task.creator_id == other.id and task.assignee_id == user.id)
@@ -255,6 +293,7 @@ class ConversationMessagesView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        # --- создаём сообщение ---
         serializer = TaskMessageSerializer(
             data=request.data,
             context={"request": request},
