@@ -18,39 +18,54 @@ export const InviteExecutorForm = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (value: string) => inviteExecutorRequest(value),
+    mutationFn: inviteExecutorRequest,
     onSuccess: () => {
-      // на всякий случай можно обновить список исполнителей
+      // обновляем список исполнителей
       queryClient.invalidateQueries({ queryKey: ["executors"] });
+      setMessage("Приглашение отправлено.");
+      setError(null);
+      setEmail("");
+    },
+    onError: (err: any) => {
+      const detail =
+        err?.response?.data?.detail ??
+        err?.response?.data?.error ??
+        "Не удалось отправить приглашение.";
+      setError(detail);
+      setMessage(null);
     },
   });
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage(null);
     setError(null);
 
-    try {
-      await mutation.mutateAsync(email);
-      setMessage(
-        "Приглашение отправлено. Исполнитель получит письмо с инструкциями."
-      );
-      setEmail("");
-    } catch (err: any) {
-      const detail =
-        err?.response?.data?.detail ||
-        err?.response?.data?.email?.[0] ||
-        "Не удалось отправить приглашение.";
-      setError(detail);
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setError("Введите e-mail исполнителя.");
+      return;
     }
+
+    mutation.mutate(trimmed);
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-3 md:flex-row md:items-end max-w-xl"
+      // аккуратное центрирование без tailwind
+      style={{
+        margin: "1.5rem auto 0",
+        maxWidth: 640,
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        columnGap: "12px",
+        rowGap: "8px",
+      }}
     >
-      <div className="flex-1">
+      <div style={{ flex: 1, minWidth: 260 }}>
         <Input
           label="Пригласить исполнителя по e-mail"
           type="email"
@@ -62,12 +77,22 @@ export const InviteExecutorForm = () => {
         />
       </div>
 
-      <Button type="submit" loading={mutation.isPending}>
-        Отправить приглашение
-      </Button>
+      <div>
+        <Button type="submit" loading={mutation.isPending}>
+          Отправить приглашение
+        </Button>
+      </div>
 
       {message && (
-        <div className="text-xs text-[var(--text-secondary)] md:mt-0 mt-1">
+        <div
+          style={{
+            flexBasis: "100%",
+            fontSize: "0.8rem",
+            color: "var(--text-secondary)",
+            marginTop: 4,
+            textAlign: "center",
+          }}
+        >
           {message}
         </div>
       )}

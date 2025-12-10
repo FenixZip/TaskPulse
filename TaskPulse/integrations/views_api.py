@@ -53,4 +53,7 @@ def telegram_link_start(request):
         )
 
     deep_link = f"https://t.me/{bot_name}?start={link.token}"
-    return Response({"link": deep_link})
+    # return Response({"link": deep_link})
+    # PROD вернуть
+    return Response({"link": deep_link}, status=status.HTTP_200_OK)
+

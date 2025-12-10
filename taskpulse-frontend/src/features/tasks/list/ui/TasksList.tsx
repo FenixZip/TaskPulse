@@ -1,5 +1,6 @@
 // src/features/tasks/list/ui/TasksList.tsx
 import { useState } from "react";
+
 import { useTasks } from "../model/useTasks";
 import { useUpdateTaskStatus } from "../../actions/model/useUpdateTaskStatus";
 import type { Task } from "../../../../entities/task/model/types";
@@ -23,37 +24,21 @@ const formatDateTime = (value: string | null) => {
   });
 };
 
-const StatusBadge = ({ status }: { status: Task["status"] }) => {
-  let label = "Новая";
-  let cls =
-    "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ";
-
-  if (status === "done") {
-    label = "Выполнена";
-    cls += "bg-emerald-500/15 text-emerald-100 border border-emerald-500/60";
-  } else if (status === "in_progress") {
-    label = "В работе";
-    cls += "bg-sky-500/15 text-sky-100 border border-sky-500/60";
-  } else if (status === "overdue") {
-    label = "Просрочена";
-    cls += "bg-red-500/15 text-red-100 border border-red-500/60";
-  } else {
-    cls += "bg-zinc-500/15 text-zinc-100 border border-zinc-500/60";
+const getStatusLabel = (status: Task["status"]): string => {
+  switch (status) {
+    case "done":
+      return "Выполнена";
+    case "in_progress":
+      return "В работе";
+    case "overdue":
+      return "Просрочена";
+    case "new":
+    default:
+      return "Новая";
   }
-
-  return <span className={cls}>{label}</span>;
 };
 
-const PriorityLabel = ({ priority }: { priority: Task["priority"] }) => {
-  if (priority === "high") return <>Высокий</>;
-  if (priority === "medium") return <>Средний</>;
-  return <>Низкий</>;
-};
-
-const getCardClasses = (task: Task) => {
-  const base =
-    "rounded-2xl border px-4 py-3 md:px-5 md:py-4 cursor-pointer transition-colors select-none";
-
+const getCardColorClass = (task: Task): string => {
   const now = new Date();
   const dueAt = task.due_at ? new Date(task.due_at) : null;
   const isOverdueByDate =
@@ -63,72 +48,88 @@ const getCardClasses = (task: Task) => {
     (isOverdueByDate && task.status !== "done");
 
   if (task.status === "done") {
-    // зелёная карта
-    return (
-      base +
-      " bg-emerald-900/20 border-emerald-500/70 hover:bg-emerald-900/40"
-    );
+    // выполненная — зелёная
+    return "task-card task-card--done";
   }
 
   if (isOverdue) {
-    // красная карта
-    return (
-      base +
-      " bg-red-900/20 border-red-500/70 hover:bg-red-900/40"
-    );
+    // просрочена — красная
+    return "task-card task-card--overdue";
   }
 
-  // обычная тёмная / «белая» по смыслу
-  return (
-    base +
-    " bg-[#020617] border-[var(--border-subtle)] hover:bg-zinc-900/60"
-  );
+  // новая / в работе — базовая светлая
+  return "task-card task-card--new";
 };
 
 export const TasksList = ({ mode }: TasksListProps) => {
   const { data: tasks, isLoading, isError } = useTasks();
-  const updateStatusMutation = useUpdateTaskStatus();
+  const updateStatus = useUpdateTaskStatus();
 
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   if (isLoading) {
-    return (
-      <div className="mt-4 text-sm text-[var(--text-secondary)]">
-        Загружаем задачи…
-      </div>
-    );
+    return <div className="tasks-empty">Загружаем задачи…</div>;
   }
 
   if (isError) {
     return (
-      <div className="mt-4 text-sm text-red-400">
+      <div className="tasks-empty text-red-400">
         Не удалось загрузить список задач.
       </div>
     );
   }
 
   if (!tasks || tasks.length === 0) {
-    return (
-      <div className="mt-4 text-sm text-[var(--text-secondary)]">
-        Задач пока нет.
-      </div>
-    );
+    return <div className="tasks-empty">Задач пока нет.</div>;
   }
 
   const personLabel = mode === "creator" ? "Исполнитель" : "Создатель";
+  const hasSingleTask = tasks.length === 1;
 
-  const handleToggle = (id: number) => {
-    setExpandedId((prev) => (prev === id ? null : id));
+  const toggleDetails = (taskId: number) => {
+    setExpandedId((prev) => (prev === taskId ? null : taskId));
   };
 
-  const handleMarkDone = (id: number, e: React.MouseEvent) => {
+  const handleMarkDone = (
+    task: Task,
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
     e.stopPropagation();
-    updateStatusMutation.mutate({ taskId: id, status: "done" });
+    if (task.status === "done") return;
+    updateStatus.mutate({ taskId: task.id, status: "done" });
+  };
+
+  const handleOpenChat = (
+    task: Task,
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    e.stopPropagation();
+
+    const peerId =
+      mode === "creator" ? task.assignee ?? null : task.creator ?? null;
+
+    if (!peerId) return;
+
+    // глобальное событие, которое ловит ExecutorsChatDock
+    const event = new CustomEvent("open-chat-from-task", {
+      detail: {
+        peerId,
+        taskId: task.id,
+        taskTitle: task.title,
+      },
+    });
+
+    window.dispatchEvent(event);
   };
 
   return (
-    <div className="mt-4 space-y-3">
+    <div
+      className={
+        hasSingleTask ? "tasks-grid tasks-grid--single" : "tasks-grid"
+      }
+    >
       {tasks.map((task) => {
+        const cardClass = getCardColorClass(task);
         const isExpanded = expandedId === task.id;
 
         const personName =
@@ -136,101 +137,111 @@ export const TasksList = ({ mode }: TasksListProps) => {
             ? task.assignee_name || "Не указано"
             : task.creator_name || "Не указано";
 
-        const dueLabel = formatDateTime(task.due_at);
+        const personPosition =
+          mode === "creator"
+            ? task.assignee_position || "Не указано"
+            : task.creator_position || "Не указано";
 
         return (
           <div
             key={task.id}
-            className={getCardClasses(task)}
-            onClick={() => handleToggle(task.id)}
+            className={cardClass}
+            onClick={() => toggleDetails(task.id)}
           >
-            {/* Верхняя строка — только то, что ты просил */}
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-col">
-                <span className="text-xs uppercase text-[var(--text-secondary)]">
-                  {personLabel}
-                </span>
-                <span className="text-sm md:text-base font-medium">
+            {/* верх: ФИО + статус */}
+            <div className="task-card__header">
+              <div>
+                <div className="task-card__label">{personLabel}</div>
+                <div className="task-card__value task-card__value--name">
                   {personName}
-                </span>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 md:justify-end">
-                <div className="flex flex-col">
-                  <span className="text-xs uppercase text-[var(--text-secondary)]">
-                    Дедлайн
-                  </span>
-                  <span className="text-sm md:text-base">
-                    {dueLabel}
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs uppercase text-[var(--text-secondary)]">
-                    Статус
-                  </span>
-                  <StatusBadge status={task.status} />
+              <div className="task-card__status-block">
+                <div className="task-card__label">Статус</div>
+                <div className="task-status-badge">
+                  {getStatusLabel(task.status)}
                 </div>
               </div>
             </div>
 
-            {/* При клике — раскрываем дополнительные детали */}
-            {isExpanded && (
-              <div className="mt-3 pt-3 border-t border-white/5 space-y-2 text-sm">
-                <div>
-                  <span className="text-xs uppercase text-[var(--text-secondary)]">
-                    Название
-                  </span>
-                  <div className="mt-1 text-[var(--text-primary)]">
-                    {task.title}
-                  </div>
-                </div>
+            {/* должность */}
+            <div className="task-card__row">
+              <span className="task-card__label">Должность</span>
+              <span className="task-card__value">{personPosition}</span>
+            </div>
 
+            {/* название задачи */}
+            <div className="task-card__row task-card__row--title">
+              <span className="task-card__label">Название задачи</span>
+              <span className="task-card__value">{task.title}</span>
+            </div>
+
+            {/* дедлайн */}
+            <div className="task-card__row">
+              <span className="task-card__label">Дедлайн</span>
+              <span className="task-card__value">
+                {formatDateTime(task.due_at)}
+              </span>
+            </div>
+
+            {/* подробности по клику */}
+            {isExpanded && (
+              <div className="task-card__details">
                 {task.description && (
-                  <div>
-                    <span className="text-xs uppercase text-[var(--text-secondary)]">
-                      Описание
-                    </span>
-                    <div className="mt-1 text-[var(--text-primary)] whitespace-pre-line">
+                  <div className="task-card__row">
+                    <span className="task-card__label">Описание</span>
+                    <div className="task-card__value task-card__value--description">
                       {task.description}
                     </div>
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-4">
-                  <div>
-                    <span className="text-xs uppercase text-[var(--text-secondary)]">
-                      Приоритет
+                {task.priority && (
+                  <div className="task-card__row">
+                    <span className="task-card__label">Приоритет</span>
+                    <span className="task-card__value">
+                      {task.priority_display || task.priority}
                     </span>
-                    <div className="mt-1">
-                      <PriorityLabel priority={task.priority} />
-                    </div>
-                  </div>
-                  {task.priority_display && (
-                    <div>
-                      <span className="text-xs uppercase text-[var(--text-secondary)]">
-                        Приоритет (от сервера)
-                      </span>
-                      <div className="mt-1">
-                        {task.priority_display}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {mode === "executor" && task.status !== "done" && (
-                  <div className="pt-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      loading={updateStatusMutation.isPending}
-                      onClick={(e) => handleMarkDone(task.id, e)}
-                    >
-                      Отметить выполненной
-                    </Button>
                   </div>
                 )}
               </div>
             )}
+
+            {/* нижние кнопки */}
+            <div className="task-card__footer">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleDetails(task.id);
+                }}
+              >
+                {isExpanded ? "Скрыть" : "Подробнее"}
+              </Button>
+
+              <div className="task-card__footer-right">
+                {mode === "executor" && task.status !== "done" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    loading={updateStatus.isPending}
+                    onClick={(e) => handleMarkDone(task, e)}
+                  >
+                    Отметить выполненной
+                  </Button>
+                )}
+
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={(e) => handleOpenChat(task, e)}
+                >
+                  Написать исполнителю
+                </Button>
+              </div>
+            </div>
           </div>
         );
       })}

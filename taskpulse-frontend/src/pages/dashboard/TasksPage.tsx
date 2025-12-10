@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { TasksList } from "../../features/tasks/list/ui/TasksList";
-import { CreateTaskForm } from "../../features/tasks/create-task/ui/CreateTaskForm";
+import { CreateTaskModal } from "../../features/tasks/create-task/ui/CreateTaskModal";
 
 type NormalizedRole = "creator" | "executor" | null;
 
@@ -17,15 +17,15 @@ export const TasksPage = () => {
   const { auth } = useAuth();
   const role = normalizeRole(auth.user?.role);
 
-  const [showCreate, setShowCreate] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   if (!role) {
     return (
       <div className="page">
         <h1 className="page-title">Задачи</h1>
         <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-xl">
-          Ваша роль ещё не определена. Пожалуйста, обновите страницу или войдите
-          заново.
+          Ваша роль ещё не определена. Пожалуйста, обновите страницу или
+          войдите заново.
         </p>
       </div>
     );
@@ -34,30 +34,30 @@ export const TasksPage = () => {
   if (role === "creator") {
     return (
       <div className="page">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div>
+        <div className="tasks-header">
+          <div className="tasks-header-title-row">
             <h1 className="page-title">Задачи</h1>
-            <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-xl">
-              Управляйте задачами для исполнителей и назначайте новые.
-            </p>
+            <button
+              type="button"
+              className="tasks-add-button"
+              onClick={() => setIsCreateOpen(true)}
+              aria-label="Назначить задачу"
+            >
+              +
+            </button>
           </div>
-          <button
-            type="button"
-            className="app-nav-link app-nav-link-primary"
-            onClick={() => setShowCreate((prev) => !prev)}
-          >
-            {showCreate ? "Скрыть форму" : "+ Назначить задачу"}
-          </button>
+          <p className="tasks-header-subtitle">
+            Управляйте задачами для исполнителей и назначайте новые.
+          </p>
         </div>
 
         <TasksList mode="creator" />
 
-        {showCreate && (
-          <CreateTaskForm
-            assigneeId={null}
-            onCreated={() => setShowCreate(false)}
-          />
-        )}
+        <CreateTaskModal
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+          assigneeId={null}
+        />
       </div>
     );
   }
@@ -66,7 +66,7 @@ export const TasksPage = () => {
   return (
     <div className="page">
       <h1 className="page-title">Мои задачи</h1>
-      <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-xl">
+      <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-xl mx-auto text-center">
         Здесь вы видите задачи, которые вам поставили. Меняйте статус и
         уточняйте детали с создателем.
       </p>

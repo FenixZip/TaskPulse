@@ -1,3 +1,5 @@
+// Изменить потом для продф
 // export const API_BASE_URL = "http://localhost:8000";
-export const API_BASE_URL = "http://pulse-zone.tech>:8000";
+export const API_BASE_URL = "http://pulse-zone.tech:8000";
+
 

@@ -2,7 +2,10 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useTasks } from "../../features/tasks/list/model/useTasks";
-import { useExecutors } from "../../features/users-management/executors-list/model/useExecutors";
+import {
+  useExecutors,
+  type Executor,
+} from "../../features/users-management/executors-list/model/useExecutors";
 
 type NormalizedRole = "creator" | "executor" | null;
 
@@ -37,7 +40,11 @@ export const StatsPage = () => {
   const role = normalizeRole(auth.user?.role);
 
   const { data: tasks, isLoading: tasksLoading, isError: tasksError } = useTasks();
-  const { data: executors, isLoading: execLoading, isError: execError } = useExecutors();
+  const {
+    data: executors,
+    isLoading: execLoading,
+    isError: execError,
+  } = useExecutors();
 
   const [period, setPeriod] = useState<Period>("current_month");
 
@@ -52,18 +59,19 @@ export const StatsPage = () => {
     if (!tasks || !executors) return [];
 
     const now = new Date();
-    const execMap = new Map(
-      executors.map((e) => [
+
+    const execMap = new Map<number, ExecutorStatRow>(
+      executors.map((e: Executor) => [
         e.id,
         {
           id: e.id,
           full_name: e.full_name || e.email,
-          company: e.company || "—",
+          company: e.company || 'OOO "Pulse-zone.tech"',
           position: e.position || "—",
           totalTasks: 0,
           overdueTasks: 0,
           efficiency: 0,
-        } as ExecutorStatRow,
+        },
       ]),
     );
 
@@ -95,13 +103,12 @@ export const StatsPage = () => {
       }
     }
 
-    // рассчитываем эффективность
     for (const row of execMap.values()) {
-      if (row.totalTasks === 0) {
-        row.efficiency = 0;
+      if (row.totalTasks > 0) {
+        const doneCount = row.totalTasks - row.overdueTasks;
+        row.efficiency = Math.round((doneCount / row.totalTasks) * 100);
       } else {
-        const completed = row.totalTasks - row.overdueTasks;
-        row.efficiency = Math.round((completed / row.totalTasks) * 100);
+        row.efficiency = 0;
       }
     }
 
@@ -119,7 +126,7 @@ export const StatsPage = () => {
       "Должность",
       "Количество задач",
       "Дедлайны нарушены",
-      "Процент эффективность",
+      "Процент эффективности",
     ];
 
     const rows = stats.map((s) => [
@@ -175,16 +182,16 @@ export const StatsPage = () => {
 
   return (
     <div className="page">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="flex flex-col items-center gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="page-title">Статистика исполнителей</h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-xl">
-            Эффективность по количеству задач и нарушенным дедлайнам
-            за выбранный период.
+            Эффективность по количеству задач и нарушенным дедлайнам за выбранный
+            период.
           </p>
         </div>
 
-        <div className="flex flex-col items-start md:items-end gap-2">
+        <div className="flex flex-col items-start gap-2 md:items-end">
           <select
             className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)]"
             value={period}
@@ -204,16 +211,16 @@ export const StatsPage = () => {
         </div>
       </div>
 
-      <div className="mt-4 overflow-x-auto">
-        <table className="min-w-full text-sm border border-[var(--border-subtle)] rounded-2xl overflow-hidden">
-          <thead className="text-xs uppercase text-[var(--text-secondary)] border-b border-[var(--border-subtle)] bg-black/30">
-            <tr>
+      <div className="mt-6 overflow-x-auto rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="border-b border-[var(--border-subtle)]">
               <th className="px-3 py-2 text-left">ФИО</th>
               <th className="px-3 py-2 text-left">Компания</th>
               <th className="px-3 py-2 text-left">Должность</th>
               <th className="px-3 py-2 text-right">Количество задач</th>
               <th className="px-3 py-2 text-right">Дедлайны нарушены</th>
-              <th className="px-3 py-2 text-right">Процент эффективность</th>
+              <th className="px-3 py-2 text-right">Процент эффективности</th>
             </tr>
           </thead>
           <tbody>
@@ -230,7 +237,7 @@ export const StatsPage = () => {
                   {row.overdueTasks || "—"}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  {row.efficiency}%{/* ? */}
+                  {row.totalTasks === 0 ? "—" : `${row.efficiency}%`}
                 </td>
               </tr>
             ))}

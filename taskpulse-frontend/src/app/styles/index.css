@@ -541,10 +541,10 @@ body {
   height: 64px;
   border-radius: 999px;
   object-fit: cover;
-  border: 1px solid var(--border-subtle);
+  border: 1px солид var(--border-subtle);
 }
 
-.profile-section-title {
+profile-section-title {
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
@@ -855,4 +855,656 @@ body {
   flex: 1;
 }
 
+/* ====== ТАСКИ: КАРТОЧКИ ====== */
+
+.tasks-grid {
+  margin-top: 1rem;
+  display: grid;
+  gap: 1rem;
+  /* чтобы карточки всегда прижимались к центру */
+  grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
+  justify-content: center;
+}
+
+/* один элемент – по центру (это уже было, пусть останется) */
+.tasks-grid.tasks-grid--single {
+  display: flex;
+  justify-content: center;
+  grid-template-columns: none;
+}
+
+.tasks-grid.tasks-grid--single {
+  display: flex;
+  justify-content: center;
+  grid-template-columns: none;
+}
+
+.task-card {
+  border-radius: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-subtle);
+  background-color: #111827;
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+/* Новая задача — белая */
+.task-card--new {
+  background-color: #ffffff;
+  color: #020617;
+}
+
+/* Выполненная — зелёная */
+.task-card--done {
+  background-color: #14532d;
+}
+
+/* Просроченная — красная */
+.task-card--overdue {
+  background-color: #7f1d1d;
+}
+
+.task-card:hover {
+  transform: translateY(-1px);
+}
+
+.task-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.task-card__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.8;
+  margin-right: 4px;
+}
+
+.task-card__value {
+  font-size: 13px;
+}
+
+.task-card__value--name {
+  font-weight: 600;
+}
+
+.task-card__value--description {
+  white-space: pre-wrap;
+}
+
+.task-card__row {
+  margin-top: 4px;
+}
+
+.task-card__status-block {
+  text-align: right;
+}
+
+.task-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  margin-top: 2px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 11px;
+}
+
+.task-card__details {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.task-card__footer {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.task-card__footer-right {
+  display: flex;
+  gap: 6px;
+}
+
+.tasks-empty {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.auth-title,
+.dashboard-header-title,
+.page-title,
+.landing-title,
+.landing-hero-title {
+  text-align: center;
+}
+
+.auth-title,
+.dashboard-header-title,
+.page-title,
+.landing-title,
+.landing-hero-title {
+  text-align: center;
+}
+
+/* текст сразу под заголовком – тоже по центру и аккуратно по ширине */
+
+.auth-title + p,
+.dashboard-header-title + p,
+.page-title + p,
+.landing-title + p,
+.landing-hero-title + p {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* заголовок + плюс для страницы задач */
+
+.tasks-header {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.tasks-header-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.tasks-header-subtitle {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  max-width: 40rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* кнопка-плюс справа от заголовка */
+
+.tasks-add-button {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-size: 1.4rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.tasks-add-button:hover {
+  background-color: var(--accent);
+  color: #000;
+  transform: translateY(-1px);
+}
+
+/* таблица исполнителей – чуть аккуратнее */
+
+.executors-table {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.executors-table thead {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.executors-table th,
+.executors-table td {
+  font-size: 0.9rem;
+}
+
+/* шапка личного кабинета – по центру */
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* предупреждение по Telegram */
+
+.profile-telegram-warning {
+  margin-bottom: 1.5rem;
+}
+
+.profile-telegram-warning .landing-card-body {
+  padding: 0.9rem 1.1rem;
+}
+
+.profile-telegram-warning-text {
+  font-size: 0.9rem;
+}
+
+/* ====== ВЫДВИЖНОЙ ЧАТ С ИСПОЛНИТЕЛЯМИ ====== */
+
+.chat-dock-toggle {
+  position: fixed;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;
+
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background-color: #020617;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  transition: background-color 0.15s ease, color 0.15s ease,
+    transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.chat-dock-toggle:hover {
+  background-color: var(--accent);
+  color: #000;
+  transform: translateY(-50%) translateX(1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+}
+
+/* затемнение фона при открытом доке */
+
+.chat-dock-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  z-index: 39;
+}
+
+/* сама панель */
+
+.chat-dock-panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+
+  width: 320px;
+  max-width: 80vw;
+
+  background-color: #020617;
+  border-right: 1px solid var(--border-subtle);
+  box-shadow: 6px 0 18px rgba(0, 0, 0, 0.6);
+
+  transform: translateX(-100%);
+  transition: transform 0.2s ease-out;
+
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-dock-panel--open {
+  transform: translateX(0);
+}
+
+.chat-dock-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.chat-dock-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.chat-dock-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chat-dock-close:hover {
+  color: #fff;
+}
+
+.chat-dock-body {
+  padding: 0.5rem 0.4rem 0.75rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.chat-dock-info {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 0.5rem 0.75rem;
+}
+
+.chat-dock-info--error {
+  color: #fecaca;
+}
+
+.chat-dock-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+.chat-dock-list-item {
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.chat-dock-list-item:hover {
+  background-color: rgba(148, 163, 184, 0.12);
+}
+
+.chat-dock-list-item--active {
+  background: linear-gradient(
+    90deg,
+    rgba(234, 179, 8, 0.18),
+    rgba(234, 179, 8, 0.03)
+  );
+}
+
+.chat-dock-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #eab308, #f97316);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.chat-dock-list-text {
+  min-width: 0;
+}
+
+.chat-dock-list-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.chat-dock-list-sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* таблица исполнителей – чуть аккуратнее */
+
+.executors-table {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.executors-table thead {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.executors-table th,
+.executors-table td {
+  font-size: 0.9rem;
+}
+
+.chat-dock-layout {
+  display: flex;
+  gap: 0.5rem;
+  height: 100%;
+}
+
+.chat-dock-peers {
+  width: 40%;
+  max-width: 180px;
+  border-right: 1px solid var(--border-subtle);
+  padding-right: 0.4rem;
+  overflow-y: auto;
+}
+
+.chat-dock-conversation {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-dock-conversation-inner {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.25rem 0.25rem 0.5rem;
+}
+
+.chat-current-task {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+
+.chat-current-task button {
+  border: none;
+  background: none;
+  padding: 0;
+  margin-left: 4px;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* кликабельное название задачи внутри пузыря */
+
+.chat-bubble-task-link {
+  border: none;
+  background: none;
+  padding: 0;
+  margin-bottom: 2px;
+  font-size: 0.8rem;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.executors-table-wrapper {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+/* сама “карточка” вокруг таблицы */
+.executors-table-card {
+  width: 80%;
+  max-width: 960px;
+
+  border-radius: 16px;
+  border: 1px solid var(--accent);
+  background-color: #020617;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7);
+
+  padding: 12px 16px;
+}
+
+/* если надо совсем по центру, а таблица уже — выравниваем её */
+.executors-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.executors-table thead {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.executors-table th,
+.executors-table td {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.executors-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.executors-table tbody tr:nth-child(even) {
+  background-color: rgba(148, 163, 184, 0.06);
+}
+
+.executors-table__actions-header {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.executors-table__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* чуть компактнее кнопки внутри таблицы */
+.executors-table__actions > button {
+  padding-inline: 10px;
+  font-size: 0.8rem;
+}
+
+.executors-table-message {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.executors-table-message--error {
+  color: #fecaca;
+}
+
+.executors-table {
+  border-collapse: collapse;
+  width: 80%;
+  max-width: 960px;
+
+  background-color: #020617;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.executors-table thead {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.executors-table th,
+.executors-table td {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.executors-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.executors-table tbody tr:nth-child(even) {
+  background-color: rgba(148, 163, 184, 0.06);
+}
+
+.executors-table__actions-header {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.executors-table__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* чуть компактнее кнопки внутри таблицы */
+.executors-table__actions > button {
+  padding-inline: 10px;
+  font-size: 0.8rem;
+}
+
+/* ====== ТАБЛИЦА СТАТИСТИКИ ИСПОЛНИТЕЛЕЙ ====== */
+
+.stats-table-wrapper {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.stats-table-card {
+  width: 80%;
+  max-width: 960px;
+
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  background-color: #020617;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7);
+
+  padding: 12px 16px;
+}
+
+/* сама таблица внутри карточки */
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stats-table thead {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.stats-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.stats-table tbody tr:nth-child(even) {
+  background-color: rgba(148, 163, 184, 0.06);
+}
 

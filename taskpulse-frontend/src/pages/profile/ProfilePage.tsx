@@ -180,11 +180,23 @@ export const ProfilePage = () => {
   return (
     <div className="dashboard-page">
       <div className="dashboard-header">
-        <h1 className="dashboard-title">Личный кабинет</h1>
+        <h1 className="dashboard-header-title">Личный кабинет</h1>
         <p className="dashboard-header-subtitle">
-          Управляйте профилем, паролем и интеграцией с Telegram.
+          Управляйте профилем, паролем и уведомлениями в Telegram.
         </p>
       </div>
+
+      {!telegramLinked && (
+        <section className="landing-card profile-telegram-warning">
+          <div className="landing-card-body">
+            <p className="landing-card-text profile-telegram-warning-text text-red-300">
+              Важно: без подтверждённого Telegram вы не будете получать
+              уведомления о задачах и дедлайнах, а часть функций сервиса
+              может быть недоступна. Подключите Telegram в блоке ниже.
+            </p>
+          </div>
+        </section>
+      )}
 
       <div className="dashboard-grid dashboard-grid--two-columns">
         <section className="landing-card">

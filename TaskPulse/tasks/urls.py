@@ -12,48 +12,42 @@ from .views_cabinet import (
 from .views_reports import monthly_report
 
 router = DefaultRouter()
-
-# ВАЖНО:
-# Регистрируем TaskViewSet без префикса, чтобы:
-#   GET /api/tasks/        -> список задач
-#   GET /api/tasks/{id}/   -> детали задачи
-router.register(r"", TaskViewSet, basename="task")
+# основной вьюсет задач:
+#   /api/tasks/           список
+#   /api/tasks/{id}/      детально и т.д.
+router.register("", TaskViewSet, basename="task")
 
 urlpatterns = [
-    # Стандартные DRF-роуты для задач:
-    #   /api/tasks/           (список + создание)
-    #   /api/tasks/{id}/      (детали/изменение/удаление)
+    # все CRUD-роуты для задач от вьюсета
     path("", include(router.urls)),
 
-    # Кабинет Создателя
-    #   /api/tasks/cabinet/creator/tasks/
+    # --- Кабинет создателя ---
+    # список задач по исполнителям
     path(
         "cabinet/creator/tasks/",
         CreatorTasksView.as_view(),
         name="creator-tasks",
     ),
-    #   /api/tasks/cabinet/creator/stats-by-assignee/
+    # статистика по исполнителям
     path(
-        "cabinet/creator/stats-by-assignee/",
+        "cabinet/creator/stats/by-assignee/",
         CreatorStatsByAssigneeView.as_view(),
         name="creator-stats-by-assignee",
     ),
 
-    # Кабинет Исполнителя
-    #   /api/tasks/cabinet/executor/tasks/
+    # --- Кабинет исполнителя ---
     path(
         "cabinet/executor/tasks/",
         ExecutorTasksView.as_view(),
         name="executor-tasks",
     ),
-    #   /api/tasks/cabinet/executor/tasks/<pk>/
     path(
         "cabinet/executor/tasks/<int:pk>/",
         ExecutorTaskDetailView.as_view(),
         name="executor-task-detail",
     ),
 
-    # Отчёт по задачам за месяц
+    # --- Отчёт по задачам за месяц ---
     #   /api/tasks/reports/monthly/
     path(
         "reports/monthly/",
@@ -61,10 +55,9 @@ urlpatterns = [
         name="reports-monthly",
     ),
 
-    # Чат создатель ↔ исполнитель
+    # --- Чат создатель ↔ исполнитель ---
     #   GET  /api/tasks/conversation-messages/?user_id=<id>
     #   POST /api/tasks/conversation-messages/
-    #   (именно такой путь дергает фронт)
     path(
         "conversation-messages/",
         ConversationMessagesView.as_view(),
