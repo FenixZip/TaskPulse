@@ -1,4 +1,5 @@
 """accounts/views.py"""
+from django.shortcuts import render
 
 from django.contrib.auth import get_user_model
 from rest_framework import generics, permissions
@@ -163,18 +164,27 @@ class AcceptInviteView(generics.CreateAPIView):
 def verify_email(request):
     """
     GET /api/auth/verify-email?token=UUID
-    Подтверждает email, если токен валиден.
-    Возвращает {"email_verified": true}.
-    """
 
-    # Собираем сериализатор из query-параметра token
+    Подтверждает email, если токен валиден.
+
+    Если явно просят JSON (?format=json) — вернём {"email_verified": true}.
+    Если человек переходит по ссылке из письма в браузере —
+    покажем красивую HTML-страницу.
+    """
     ser = VerifyEmailSerializer(data={"token": request.query_params.get("token")})
-    # Валидируем входные данные
     ser.is_valid(raise_exception=True)
-    # Выполняем create() сериализатора — он отметит почту подтверждённой
-    result = ser.save()
-    # Возвращаем результат
-    return Response(result)
+    result = ser.save()   # {"email_verified": True/False}
+
+    # Явный запрос JSON (например, из фронта: /verify-email/?token=...&format=json)
+    fmt = request.query_params.get("format")
+    if fmt in {"json", "api"}:
+        return Response(result)
+
+    # Обычный переход по ссылке из письма — показываем страницу
+    context = {
+        "email_verified": bool(result.get("email_verified")),
+    }
+    return render(request, "accounts/email_verified.html", context, status=200)
 
 
 class ExecutorListView(generics.ListAPIView):

@@ -562,8 +562,6 @@ profile-section-title {
 
 /* Чат */
 
-/* Чат – обновлённый стиль */
-
 .chat-shell {
   margin-top: 1.5rem;
   display: flex;
@@ -577,102 +575,64 @@ profile-section-title {
   flex: 1;
   overflow-y: auto;
   border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: radial-gradient(circle at top left, #020617, #020617);
-  padding: 0.75rem 0.6rem 1rem;
+  border: 1px solid var(--border-subtle);
+  padding: 0.9rem;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 0.9rem;
 }
-
-/* строка сообщения */
 
 .chat-message-row {
   display: flex;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.5rem;
 }
 
 .chat-message-row.me {
   justify-content: flex-end;
 }
 
-/* пузырёк */
-
 .chat-bubble {
-  max-width: 80%;
+  max-width: 70%;
   border-radius: 18px;
-  padding: 0.6rem 0.9rem;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(15, 23, 42, 0.9);
+  padding: 0.55rem 0.85rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
 .chat-bubble.me {
-  background: linear-gradient(
-    135deg,
-    rgba(234, 179, 8, 0.25),
-    rgba(234, 179, 8, 0.15)
-  );
-  border-color: rgba(234, 179, 8, 0.6);
+  background-color: var(--accent);
+  color: #020617;
 }
 
 .chat-bubble.other {
-  background: radial-gradient(circle at top left, #020617, #020617);
+  background-color: rgba(15, 23, 42, 0.9);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
 }
-
-/* заголовок пузырька (имя + время) */
 
 .chat-bubble-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.25rem;
+  justify-content: space-between;
   gap: 0.5rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.7rem;
+  opacity: 0.75;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.chat-bubble-sender {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+.chat-bubble-task {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  margin-bottom: 0.25rem;
 }
-
-.chat-bubble-time {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-/* текст сообщения */
 
 .chat-message-text {
-  font-size: 0.9rem;
-  color: var(--text-primary);
   white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.35;
-  margin-bottom: 0.15rem;
+  font-size: 0.9rem;
 }
-
-/* ссылка на задачу внутри сообщения */
-
-.chat-bubble-task-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin-bottom: 0.2rem;
-  padding: 0.15rem 0.4rem;
-  border-radius: 999px;
-  background-color: rgba(234, 179, 8, 0.12);
-  border: 1px solid rgba(234, 179, 8, 0.4);
-  color: var(--accent);
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-
-.chat-bubble-task-link:hover {
-  background-color: rgba(234, 179, 8, 0.22);
-}
-
-/* вложение */
 
 .chat-message-attachment {
-  margin-top: 0.2rem;
+  margin-top: 0.25rem;
   font-size: 0.8rem;
 }
 
@@ -681,19 +641,11 @@ profile-section-title {
   text-decoration: underline;
 }
 
-/* низ чата: инпут + кнопка */
-
 .chat-input-row {
   display: flex;
   gap: 0.75rem;
   align-items: flex-end;
 }
-
-/* чтобы инпут чата растягивался на всю ширину */
-.chat-input-row label {
-  flex: 1;
-}
-
 
 /* чтобы инпут чата растягивался на всю ширину */
 .chat-input-row label {

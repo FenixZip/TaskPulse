@@ -157,32 +157,15 @@ class Task(models.Model):
     @property
     def creator_name(self) -> str:
         """Удобное поле для ФИО создателя задачи."""
+
         return self.creator.full_name or self.creator.email
-
-    @property
-    def creator_position(self) -> str:
-        """Должность создателя задачи."""
-        return self.creator.position or ""
-
-    @property
-    def assignee_name(self) -> str:
-        """Удобное поле для ФИО исполнителя задачи."""
-        if self.assignee_id and self.assignee:
-            return self.assignee.full_name or self.assignee.email
-        return ""
-
-    @property
-    def assignee_position(self) -> str:
-        """Должность исполнителя задачи."""
-        if self.assignee_id and self.assignee:
-            return self.assignee.position or ""
-        return ""
 
     def last_result_file_url(self) -> Optional[str]:
         """
         URL последнего файла-результата от исполнителя,
         если такой есть.
         """
+
         result = (
             self.attachments
             .filter(kind=TaskAttachment.Kind.RESULT)

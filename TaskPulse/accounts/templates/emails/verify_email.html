@@ -1,6 +1,6 @@
 {% extends "emails/base_email.html" %}
 
-{% block subject %}Подтверждение почты в TaskPulse{% endblock %}
+{% block subject %}Подтверждение почты в Pulse-zone.tech{% endblock %}
 
 {% block content %}
 <p>Здравствуйте{% if user.full_name %}, {{ user.full_name }}{% endif %}!</p>
@@ -21,7 +21,7 @@
 </p>
 
 <p class="secondary">
-  Если вы не регистрировались в TaskPulse, просто проигнорируйте это письмо —
+  Если вы не регистрировались в Pulse-zone.tech, просто проигнорируйте это письмо —
   ваш адрес не будет подтверждён.
 </p>
 {% endblock %}

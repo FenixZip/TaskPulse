@@ -35,8 +35,7 @@ send_task_assigned_notification.delay(999999)
 python manage.py runserver 0.0.0.0:8000
 celery -A TaskPulse worker -l info -P solo
 celery -A TaskPulse beat -l info
-docker run -d -p 6379:6379 redis:7
-
+e
 
 from integrations.notifications import send_telegram_message
 send_telegram_message(493089867, "Тестовое сообщение от Pulse-zone")
