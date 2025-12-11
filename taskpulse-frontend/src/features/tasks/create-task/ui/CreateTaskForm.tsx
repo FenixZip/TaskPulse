@@ -23,28 +23,25 @@ export const CreateTaskForm = ({
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] =
-    useState<CreateTaskPayload["priority"]>("medium");
   const [dueAt, setDueAt] = useState<string>("");
 
-  const [internalAssigneeId, setInternalAssigneeId] = useState<
-    number | null
-  >(assigneeId ?? null);
+  const [internalAssigneeId, setInternalAssigneeId] = useState<number | null>(
+    assigneeId ?? null,
+  );
 
   useEffect(() => {
     setInternalAssigneeId(assigneeId ?? null);
   }, [assigneeId]);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!internalAssigneeId) {
-      return;
-    }
+    if (!internalAssigneeId) return;
 
     const payload: CreateTaskPayload = {
       title: title.trim(),
       description: description.trim(),
-      priority,
+      // приоритет больше не в форме, шьём «Средний» по умолчанию
+      priority: "medium",
       assignee: internalAssigneeId,
       due_at: dueAt ? new Date(dueAt).toISOString() : null,
     };
@@ -53,7 +50,6 @@ export const CreateTaskForm = ({
       onSuccess: () => {
         setTitle("");
         setDescription("");
-        setPriority("medium");
         setDueAt("");
         if (!assigneeId) {
           setInternalAssigneeId(null);
@@ -78,7 +74,7 @@ export const CreateTaskForm = ({
         <label className="flex flex-col gap-1 text-sm md:col-span-2">
           <span>Исполнитель</span>
           <select
-            className="rounded-lg border bg-[#020617] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors border-[var(--border-subtle)] focus:border-[var(--accent)]"
+            className="rounded-lg border border-[var(--border-subtle)] bg-[#020617] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
             value={internalAssigneeId ?? ""}
             onChange={(e) =>
               setInternalAssigneeId(
@@ -114,7 +110,7 @@ export const CreateTaskForm = ({
           <span>Дедлайн</span>
           <input
             type="datetime-local"
-            className="rounded-lg border bg-[#020617] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors border-[var(--border-subtle)] focus:border-[var(--accent)]"
+            className="rounded-lg border border-[var(--border-subtle)] bg-[#020617] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
             value={dueAt}
             onChange={(e) => setDueAt(e.target.value)}
           />
@@ -124,27 +120,11 @@ export const CreateTaskForm = ({
         <label className="flex flex-col gap-1 text-sm md:col-span-2">
           <span>Описание задачи</span>
           <textarea
-            className="min-h-[80px] resize-y rounded-lg border bg-[#020617] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors border-[var(--border-subtle)] focus:border-[var(--accent)] placeholder:text-[var(--text-secondary)]"
+            className="min-h-[80px] resize-y rounded-lg border border-[var(--border-subtle)] bg-[#020617] px-3 py-2 text-sm outline-none focus:border-[var(--accent)] placeholder:text-[var(--text-secondary)]"
             placeholder="Подробно опишите задачу, чтобы исполнителю было проще"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-        </label>
-
-        {/* Приоритет */}
-        <label className="flex flex-col gap-1 text-sm">
-          <span>Приоритет</span>
-          <select
-            className="rounded-lg border bg-[#020617] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors border-[var(--border-subtle)] focus:border-[var(--accent)]"
-            value={priority}
-            onChange={(e) =>
-              setPriority(e.target.value as CreateTaskPayload["priority"])
-            }
-          >
-            <option value="high">Высокий</option>
-            <option value="medium">Средний</option>
-            <option value="low">Низкий</option>
-          </select>
         </label>
 
         <div className="md:col-span-2 flex justify-end pt-1">

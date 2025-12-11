@@ -69,17 +69,26 @@ export const TaskDetailsPage = () => {
         ← Назад
       </Button>
 
-      <h1 className="page-title">{task.title}</h1>
+      <h1 className="page-title mb-2">{task.title}</h1>
 
       <div className="mt-2 text-sm text-[var(--text-secondary)] space-y-1">
         <div>
           Постановщик:{" "}
           <strong>{task.creator_name || "Не указан"}</strong>
         </div>
+
         <div>
           Исполнитель:{" "}
           <strong>{task.assignee_name || "Не назначен"}</strong>
         </div>
+
+        {task.assignee_position && (
+          <div>
+            Должность исполнителя:{" "}
+            <strong>{task.assignee_position}</strong>
+          </div>
+        )}
+
         <div>Дедлайн: {formatDateTime(task.due_at)}</div>
       </div>
 

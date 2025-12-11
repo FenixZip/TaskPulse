@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from integrations.models import TelegramProfile
 from .models import Task, TaskAttachment, TaskMessage
 
 User = get_user_model()
@@ -125,6 +126,10 @@ class TaskSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)
 
     creator_name = serializers.CharField(read_only=True)
+    creator_position = serializers.CharField(read_only=True)
+    assignee_name = serializers.CharField(read_only=True)
+    assignee_position = serializers.CharField(read_only=True)
+
     result_file = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -133,25 +138,36 @@ class TaskSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
-            "executor_comment",  # Добавил поле
+            "executor_comment",
             "priority",
             "priority_display",
             "status",
             "status_display",
             "due_at",
             "creator",
-            "creator_name",  # Добавил поле
+            "creator_name",
+            "creator_position",
             "assignee",
+            "assignee_name",
+            "assignee_position",
             "created_at",
             "updated_at",
             "attachments",
-            "result_file",  # <— добавили
+            "result_file",
         )
-        read_only_fields = ("id", "creator", "creator_name", "created_at", "updated_at")
+        read_only_fields = (
+            "id",
+            "creator",
+            "creator_name",
+            "creator_position",
+            "assignee_name",
+            "assignee_position",
+            "created_at",
+            "updated_at",
+        )
 
     def get_result_file(self, obj: Task) -> Optional[str]:
         return obj.last_result_file_url()
-
     def validate(self, attrs):
         assignee = attrs.get("assignee") or getattr(self.instance, "assignee", None)
 

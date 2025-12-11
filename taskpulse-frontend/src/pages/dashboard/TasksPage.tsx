@@ -53,6 +53,7 @@ export const TasksPage = () => {
 
         <TasksList mode="creator" />
 
+        {/* Модалка создания задачи */}
         <CreateTaskModal
           isOpen={isCreateOpen}
           onClose={() => setIsCreateOpen(false)}

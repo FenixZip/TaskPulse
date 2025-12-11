@@ -271,36 +271,46 @@ class ConversationMessagesView(APIView):
                     {"detail": "Задача не найдена."},
                     status=status.HTTP_404_NOT_FOUND,
                 )
+        if task_id:
+            try:
+                task_id_int = int(task_id)
+            except (TypeError, ValueError):
+                return Response(
+                    {"detail": "Некорректный task."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            try:
+                task = Task.objects.get(pk=task_id_int)
+            except Task.DoesNotExist:
+                return Response(
+                    {"detail": "Задача не найдена."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
         else:
-            # Если task явно не указали — пробуем найти единственную общую задачу
+            # Если task явно не указали — берём самую "свежую" общую задачу
             tasks_qs = Task.objects.filter(
                 Q(creator=user, assignee=other)
                 | Q(creator=other, assignee=user)
-            )
-            count = tasks_qs.count()
-            if count == 0:
+            ).order_by("-created_at")
+
+            task = tasks_qs.first()
+            if task is None:
                 return Response(
                     {"detail": "Нет общей задачи для чата."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            elif count > 1:
-                return Response(
-                    {"detail": "Нужно явно указать task для сообщения."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            task = tasks_qs.first()
 
-        # проверяем, что оба участника действительно связаны этой задачей
+            # проверяем, что оба участника действительно связаны этой задачей
         if not (
-            (task.creator_id == user.id and task.assignee_id == other.id)
-            or (task.creator_id == other.id and task.assignee_id == user.id)
+                (task.creator_id == user.id and task.assignee_id == other.id)
+                or (task.creator_id == other.id and task.assignee_id == user.id)
         ):
             return Response(
                 {"detail": "Нет доступа к чату по этой задаче."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # создаём сообщение
+            # создаём сообщение
         serializer = TaskMessageSerializer(
             data=request.data,
             context={"request": request},

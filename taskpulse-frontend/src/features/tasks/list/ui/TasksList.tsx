@@ -1,5 +1,6 @@
 // src/features/tasks/list/ui/TasksList.tsx
 import { useState } from "react";
+import type { MouseEvent } from "react";
 
 import { useTasks } from "../model/useTasks";
 import { useUpdateTaskStatus } from "../../actions/model/useUpdateTaskStatus";
@@ -92,16 +93,17 @@ export const TasksList = ({ mode }: TasksListProps) => {
 
   const handleMarkDone = (
     task: Task,
-    e: React.MouseEvent<HTMLButtonElement>,
+    e: MouseEvent<HTMLButtonElement>,
   ) => {
     e.stopPropagation();
     if (task.status === "done") return;
+
     updateStatus.mutate({ taskId: task.id, status: "done" });
   };
 
   const handleOpenChat = (
     task: Task,
-    e: React.MouseEvent<HTMLButtonElement>,
+    e: MouseEvent<HTMLButtonElement>,
   ) => {
     e.stopPropagation();
 
@@ -110,7 +112,7 @@ export const TasksList = ({ mode }: TasksListProps) => {
 
     if (!peerId) return;
 
-    // глобальное событие, которое ловит ExecutorsChatDock
+    // глобальное событие, которое ловит чат-док
     const event = new CustomEvent("open-chat-from-task", {
       detail: {
         peerId,
@@ -196,15 +198,7 @@ export const TasksList = ({ mode }: TasksListProps) => {
                     </div>
                   </div>
                 )}
-
-                {task.priority && (
-                  <div className="task-card__row">
-                    <span className="task-card__label">Приоритет</span>
-                    <span className="task-card__value">
-                      {task.priority_display || task.priority}
-                    </span>
-                  </div>
-                )}
+                {/* Приоритет больше не показываем */}
               </div>
             )}
 

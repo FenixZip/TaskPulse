@@ -1,6 +1,4 @@
-src/configs поменять для прода, не забыдь!
-TaskPulse/taskpulse-frontend/src/shared/config/env.ts:
-views_api
+src/.env
 python manage.py runserver 0.0.0.0:8000
 
 python manage.py shell
@@ -27,8 +25,8 @@ docker exec -it taskpulse-web env | grep TELEGRAM_WEBHOOK_SECRET
 
 
 python manage.py flush
-curl "http://localhost:8000/api/auth/verify-email/?token=0c18b375-9100-40a4-869d-d3637fbe867b"
-curl "http://localhost:5173/invite/accept?token=3004fbc4-3bb9-467c-8219-eda575d86e8d"
+curl "http://localhost:8000/api/auth/verify-email/?token=59cc1e1e-f736-4ad0-953a-3e17f6df3f40"
+curl "http://localhost:5173/invite/accept?token=9a4a9efa-1d12-4064-8b2f-e5c1f3b81922"
 from tasks.tasks_reminders import send_task_assigned_notification
 
 send_task_assigned_notification.delay(999999)

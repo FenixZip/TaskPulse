@@ -12,6 +12,7 @@ interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
 
+  // если модалку открыли "из исполнителя" — можно сразу передать id/имя
   assigneeId: number | null;
   assigneeName?: string | null;
 }
@@ -24,13 +25,11 @@ export const CreateTaskModal = ({
 }: CreateTaskModalProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] =
-    useState<"low" | "medium" | "high">("medium");
   const [dueAt, setDueAt] = useState<string>("");
 
-  const [internalAssigneeId, setInternalAssigneeId] = useState<
-    number | null
-  >(assigneeId);
+  const [internalAssigneeId, setInternalAssigneeId] =
+    useState<number | null>(assigneeId);
+
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: executors } = useExecutors();
@@ -51,11 +50,17 @@ export const CreateTaskModal = ({
       return;
     }
 
+    if (!title.trim()) {
+      setFormError("Введите название задачи.");
+      return;
+    }
+
     const payload: CreateTaskPayload = {
-      title,
-      description,
-      priority,
+      title: title.trim(),
+      description: description.trim(),
       assignee: internalAssigneeId,
+      // приоритет больше не выбираем — всегда Средний
+      priority: "medium",
       due_at: dueAt ? new Date(dueAt).toISOString() : null,
     };
 
@@ -63,10 +68,9 @@ export const CreateTaskModal = ({
       await createTask.mutateAsync(payload);
       setTitle("");
       setDescription("");
-      setPriority("medium");
       setDueAt("");
       onClose();
-    } catch (_error) {
+    } catch {
       setFormError("Не удалось создать задачу. Попробуйте ещё раз.");
     }
   };
@@ -87,7 +91,7 @@ export const CreateTaskModal = ({
             <label className="flex flex-col gap-1 text-sm">
               <span>Исполнитель</span>
               <select
-                className="rounded-lg border bg-[#020617] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors border-[var(--border-subtle)] focus:border-[var(--accent)]"
+                className="rounded-lg border border-[var(--border-subtle)] bg-[#020617] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
                 value={internalAssigneeId ?? ""}
                 onChange={(e) =>
                   setInternalAssigneeId(
@@ -95,11 +99,10 @@ export const CreateTaskModal = ({
                   )
                 }
               >
-                <option value="">Выберите исполнителя…</option>
-                {executors?.map((ex) => (
+                <option value="">Не выбран</option>
+                {(executors ?? []).map((ex) => (
                   <option key={ex.id} value={ex.id}>
                     {ex.full_name || ex.email}
-                    {ex.company ? ` (${ex.company})` : ""}
                   </option>
                 ))}
               </select>
@@ -107,53 +110,38 @@ export const CreateTaskModal = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Название задачи"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
+        <form className="space-y-3" onSubmit={handleSubmit}>
+          <label className="flex flex-col gap-1 text-sm">
+            <span>Название задачи</span>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Например: Позвонить клиенту…"
+            />
+          </label>
 
           <label className="flex flex-col gap-1 text-sm">
             <span>Описание задачи</span>
             <textarea
-              className="rounded-lg border bg-[#020617] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors border-[var(--border-subtle)] focus:border-[var(--accent)] placeholder:text-[var(--text-secondary)] min-h-[80px]"
+              className="min-h-[80px] rounded-lg border border-[var(--border-subtle)] bg-[#020617] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Кратко опишите, что нужно сделать…"
+              placeholder="Что нужно сделать…"
             />
           </label>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span>Приоритет</span>
-              <select
-                className="rounded-lg border bg-[#020617] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors border-[var(--border-subtle)] focus:border-[var(--accent)]"
-                value={priority}
-                onChange={(e) =>
-                  setPriority(e.target.value as "low" | "medium" | "high")
-                }
-              >
-                <option value="low">Низкий</option>
-                <option value="medium">Средний</option>
-                <option value="high">Высокий</option>
-              </select>
-            </label>
-
-            <div className="flex flex-col gap-1 text-sm">
-              <span>Дедлайн</span>
-              <input
-                type="datetime-local"
-                className="w-full rounded-xl bg-black/20 border border-[var(--border-subtle)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)] text-[var(--text-primary)]"
-                value={dueAt}
-                onChange={(e) => setDueAt(e.target.value)}
-              />
-            </div>
+          <div className="flex flex-col gap-1 text-sm">
+            <span>Дедлайн</span>
+            <input
+              type="datetime-local"
+              className="rounded-lg border border-[var(--border-subtle)] bg-[#020617] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+              value={dueAt}
+              onChange={(e) => setDueAt(e.target.value)}
+            />
           </div>
 
           {formError && (
-            <div className="text-xs text-red-400">{formError}</div>
+            <p className="text-sm text-red-500">{formError}</p>
           )}
 
           <div className="flex justify-end gap-3 pt-2">

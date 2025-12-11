@@ -29,4 +29,4 @@ dist-ssr/
 *.sw?
 .env.prod
 __pycache__/
-*.py[cod]
+*.py[cod].coverage
