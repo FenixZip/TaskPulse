@@ -125,10 +125,11 @@ class TaskSerializer(serializers.ModelSerializer):
     )
     status_display = serializers.CharField(source="get_status_display", read_only=True)
 
-    creator_name = serializers.CharField(read_only=True)
-    creator_position = serializers.CharField(read_only=True)
-    assignee_name = serializers.CharField(read_only=True)
-    assignee_position = serializers.CharField(read_only=True)
+    creator_name = serializers.CharField(source="creator.full_name", read_only=True)
+    creator_position = serializers.CharField(source="creator.position", read_only=True, allow_null=True)
+
+    assignee_name = serializers.CharField(source="assignee.full_name", read_only=True, allow_null=True)
+    assignee_position = serializers.CharField(source="assignee.position", read_only=True, allow_null=True)
 
     result_file = serializers.SerializerMethodField(read_only=True)
 

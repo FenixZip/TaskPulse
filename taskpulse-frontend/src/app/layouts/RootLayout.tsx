@@ -154,7 +154,7 @@ export const RootLayout = () => {
           </div>
           <div className="app-footer-right">
             <div>Техническая поддержка</div>
-            <div>pulse-zone@support.ru</div>
+            <div>pulse-zone.tech@bk.ru</div>
           </div>
         </div>
       </footer>
