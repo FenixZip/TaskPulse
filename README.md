@@ -1,6 +1,18 @@
 src/.env
 python manage.py runserver 0.0.0.0:8000
 
+
+npx localtunnel --port 8000 --subdomain two-mangos-sit
+
+curl -s "https://api.telegram.org/bot8219195501:AAH9WLtZiEp5Reez1FUoXN2fv6UvKQGFi2k/getWebhookInfo"
+curl -i http://localhost:8000/api/integrations/telegram/webhook/long-random-secret/
+curl -s "https://api.telegram.org/bot8219195501:AAH9WLtZiEp5Reez1FUoXN2fv6UvKQGFi2k/setWebhook" \
+  -d "url=https://two-mangos-sit.loca.lt/api/integrations/telegram/webhook/long-random-secret/" \
+  -d "drop_pending_updates=true"
+curl -i http://localhost:8000/api/integrations/telegram/webhook/long-random-secret/
+
+
+
 python manage.py shell
 docker compose build web
 docker compose up -d

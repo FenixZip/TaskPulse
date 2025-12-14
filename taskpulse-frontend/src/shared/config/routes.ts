@@ -10,6 +10,8 @@ export const ROUTES = {
   acceptInvite: "/invite/accept",
 
   appRoot: "/app",
+  connectTelegram: "/app/connect-telegram",
+
 
   // Вкладки в шапке
   tasks: "/app/tasks",

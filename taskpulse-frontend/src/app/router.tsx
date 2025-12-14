@@ -21,9 +21,9 @@ import { StatsPage } from "../pages/dashboard/StatsPage";
 import { AppRootRedirect } from "../pages/dashboard/AppRootRedirect";
 
 import { ProfilePage } from "../pages/profile/ProfilePage";
+import { ConnectTelegramPage } from "../pages/connect-telegram/ConnectTelegramPage";
 
 import { TaskDetailsPage } from "../pages/tasks/TaskDetailsPage";
-
 import { ConversationPage } from "../pages/chat/ConversationPage";
 
 import { ErrorPage } from "../pages/error/ErrorPage";
@@ -39,10 +39,7 @@ export const AppRouter = () => {
         <Route path="auth">
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
-          <Route
-            path="reset-password"
-            element={<ResetPasswordRequestPage />}
-          />
+          <Route path="reset-password" element={<ResetPasswordRequestPage />} />
         </Route>
 
         {/* ссылка из email-приглашения */}
@@ -57,6 +54,9 @@ export const AppRouter = () => {
             <Route path="app" element={<DashboardLayout />}>
               {/* /app → редирект по роли (creator/executor) */}
               <Route index element={<AppRootRedirect />} />
+
+              {/* обязательный шаг подключения Telegram */}
+              <Route path="connect-telegram" element={<ConnectTelegramPage />} />
 
               <Route path="home" element={<DashboardHomePage />} />
 

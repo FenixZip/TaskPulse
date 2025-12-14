@@ -42,12 +42,11 @@ export const LoginForm = () => {
         },
       });
 
-      // редирект в личный кабинет в зависимости от роли
-      if (result.role === "creator") {
-        navigate(ROUTES.creatorDashboard);
-      } else {
-        navigate(ROUTES.executorDashboard);
-      }
+      // После логина всегда идём в /app.
+      // Дальше RequireTelegram решит:
+      // - если Telegram подтверждён -> пустит в приложение
+      // - если нет -> отправит на /app/connect-telegram
+      navigate(ROUTES.appRoot, { replace: true });
     } catch (error: any) {
       const message =
         error?.response?.data?.detail ||
@@ -66,7 +65,7 @@ export const LoginForm = () => {
       const res = await resendMutation.mutateAsync({ email: resendEmail });
       setResendMessage(
         res.detail ||
-          "Письмо отправлено, проверьте почту (включая папку «Спам»)."
+          "Письмо отправлено, проверьте почту (включая папку «Спам»).",
       );
 
       // прячем форму после успешной отправки
@@ -83,9 +82,7 @@ export const LoginForm = () => {
   return (
     <div className="auth-card">
       <h1 className="auth-title">Вход в Pulse-zone</h1>
-      <p className="auth-subtitle">
-        Продолжите работу с задачами вашей команды.
-      </p>
+      <p className="auth-subtitle">Продолжите работу с задачами вашей команды.</p>
 
       {formError && <div className="auth-error mt-3">{formError}</div>}
 

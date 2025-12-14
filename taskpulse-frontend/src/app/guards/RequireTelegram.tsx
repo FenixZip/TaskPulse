@@ -8,11 +8,7 @@ import { ROUTES } from "../../shared/config/routes";
 export const RequireTelegram = () => {
   const { auth } = useAuth();
   const location = useLocation();
-  const {
-    data: telegramProfile,
-    isLoading,
-    isError,
-  } = useTelegramProfile();
+  const { data: telegramProfile, isLoading, isError } = useTelegramProfile();
 
   // Не залогинен -> отправляем на логин
   if (!auth?.user || !auth.token) {
@@ -30,18 +26,21 @@ export const RequireTelegram = () => {
     );
   }
 
-  // Если случилась ошибка при запросе профиля Telegram —
-  // считаем, что он не подтверждён.
   const telegramConfirmed = !!telegramProfile?.telegram_user_id;
-  const isProfilePage = location.pathname.startsWith("/app/profile");
+  const isConnectTelegramPage = location.pathname.startsWith(ROUTES.connectTelegram);
 
-  // Если Telegram не подтверждён и мы НЕ на странице профиля —
-  // отправляем пользователя в профиль, где есть блок привязки
-  if ((!telegramConfirmed || isError) && !isProfilePage) {
-    return <Navigate to="/app/profile" replace />;
+  // Если Telegram не подтверждён (или ошибка) и мы НЕ на странице подключения —
+  // отправляем на обязательный шаг подключения.
+  if ((!telegramConfirmed || isError) && !isConnectTelegramPage) {
+    return (
+      <Navigate
+        to={ROUTES.connectTelegram}
+        replace
+        state={{ from: location }}
+      />
+    );
   }
 
-  // На /app/profile пускаем всегда (если залогинен),
-  // чтобы пользователь мог привязать Telegram.
+  // На странице подключения Telegram пускаем всегда (если залогинен)
   return <Outlet />;
 };
