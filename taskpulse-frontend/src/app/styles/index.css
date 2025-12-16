@@ -4,6 +4,12 @@
 @tailwind components;
 @tailwind utilities;
 
+
+:root {
+  --container-max: 1600px;
+  --container-pad-x: 1.5rem;
+}
+
 /* =========================
    Базовые стили
    ========================= */
@@ -70,9 +76,9 @@ textarea {
 }
 
 .app-header-inner {
-  max-width: 1200px;
+  max-width: var(--container-max);
   margin: 0 auto;
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem var(--container-pad-x);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -239,17 +245,17 @@ textarea {
 /* ВАЖНО: расширили до 1600px, иначе 5 карточек физически не влезут */
 .page {
   width: 100%;
-  max-width: 1600px;
+  max-width: var(--container-max);
   margin: 0 auto;
-  padding: 2.25rem 1.5rem 3rem;
+  padding: 2.25rem var(--container-pad-x) 3rem;
 }
 
 /* Страницы кабинета */
 .dashboard-page {
   width: 100%;
-  max-width: 1600px;
+  max-width: var(--container-max);
   margin: 0 auto;
-  padding: 3rem 1.5rem 4rem;
+  padding: 3rem var(--container-pad-x) 4rem;
 }
 
 /* Футер */
@@ -261,14 +267,13 @@ textarea {
 }
 
 .app-footer-inner {
-  max-width: 1200px;
+  max-width: var(--container-max);
   margin: 0 auto;
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem var(--container-pad-x);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   font-size: 0.8rem;
-  color: var(--text-secondary);
 }
 
 .app-footer-left,
@@ -567,9 +572,15 @@ textarea {
   max-width: none;
 }
 
-/* если где-то ставишь tasks-grid--single — не ломаем сетку */
+/* Одна задача: фиксируем ширину карточки и центрируем */
 .tasks-grid.tasks-grid--single {
-  grid-template-columns: minmax(280px, 1fr) !important;
+  grid-template-columns: minmax(320px, 520px) !important;
+  justify-content: center;
+}
+
+.tasks-grid.tasks-grid--single > .task-card {
+  max-width: 520px;
+  justify-self: center;
 }
 
 .task-card {
@@ -695,6 +706,7 @@ textarea {
   max-width: 40rem;
   margin-left: auto;
   margin-right: auto;
+  text-align: center;
 }
 
 .tasks-add-button {
@@ -833,4 +845,12 @@ textarea {
 
 .stats-table tbody tr:nth-child(even) {
   background-color: rgba(148, 163, 184, 0.06);
+}
+
+.task-status-datetime {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.75;
+  text-align: center;
+  line-height: 1.2;
 }
