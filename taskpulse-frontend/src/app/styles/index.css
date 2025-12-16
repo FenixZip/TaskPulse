@@ -1,6 +1,12 @@
 @import "./theme.css";
 
-/* Базовые стили */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================
+   Базовые стили
+   ========================= */
 
 *,
 *::before,
@@ -16,8 +22,8 @@ body {
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Arial, sans-serif;
   background: radial-gradient(circle at top, #0b1120 0, #020617 45%, #020617 100%);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -27,7 +33,28 @@ body {
   height: 100%;
 }
 
-/* Каркас приложения */
+/* Предсказуемые таблицы после Tailwind preflight */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  font-weight: 600;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* =========================
+   Каркас приложения
+   ========================= */
 
 .app-root {
   min-height: 100vh;
@@ -153,7 +180,6 @@ body {
   white-space: nowrap;
 }
 
-
 .app-nav-link {
   padding: 0.4rem 0.9rem;
   border-radius: 999px;
@@ -184,12 +210,46 @@ body {
   background-color: var(--accent-hover);
 }
 
-/* Основной контент */
+/* =========================
+   Основной контент (чтобы ничего не сжималось)
+   ========================= */
 
 .app-main {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  align-items: stretch;
+  width: 100%;
+  max-width: none;
+}
+
+.app-main > * {
+  width: 100%;
+  min-width: 0;
+}
+
+/* если у тебя есть обёртка dashboard-inner — НЕ ограничиваем её */
+.dashboard-inner {
+  width: 100%;
+  max-width: none;
+}
+
+/* Универсальный контейнер страницы */
+/* ВАЖНО: расширили до 1600px, иначе 5 карточек физически не влезут */
+.page {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2.25rem 1.5rem 3rem;
+}
+
+/* Страницы кабинета */
+.dashboard-page {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
 }
 
 /* Футер */
@@ -218,14 +278,9 @@ body {
   gap: 0.15rem;
 }
 
-@media (max-width: 700px) {
-  .app-footer-inner {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-}
-
-/* Auth pages */
+/* =========================
+   Auth pages
+   ========================= */
 
 .auth-page {
   max-width: 420px;
@@ -265,7 +320,9 @@ body {
   color: var(--text-secondary);
 }
 
-/* Главная страница */
+/* =========================
+   Главная страница
+   ========================= */
 
 .landing {
   max-width: 1200px;
@@ -275,8 +332,6 @@ body {
   flex-direction: column;
   gap: 4rem;
 }
-
-/* Хиро-секция */
 
 .landing-hero {
   display: flex;
@@ -290,7 +345,6 @@ body {
   margin: 0 0 0.5rem;
 }
 
-/* Без подчёркивания */
 .landing-hero-brand {
   color: var(--accent);
 }
@@ -302,19 +356,11 @@ body {
   margin-bottom: 2rem;
 }
 
-/* Карточки фич */
-
 .landing-features {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
-}
-
-@media (max-width: 700px) {
-  .landing-features {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .landing-feature-card {
@@ -340,8 +386,6 @@ body {
 .landing-feature-text {
   font-size: 0.95rem;
 }
-
-/* Кнопки на главной */
 
 .landing-hero-actions {
   display: flex;
@@ -382,8 +426,6 @@ body {
   background-color: rgba(163, 255, 18, 0.08);
 }
 
-/* Блок «Почему Pulse-zone.tech?» */
-
 .landing-why {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
@@ -391,12 +433,6 @@ body {
   align-items: center;
   border-top: 1px solid var(--border-subtle);
   padding-top: 3rem;
-}
-
-@media (max-width: 900px) {
-  .landing-why {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .landing-why-title {
@@ -423,13 +459,9 @@ body {
   margin: 0 auto;
 }
 
-/* Страницы кабинета (Задачи, Исполнители и т.п.) */
-
-.dashboard-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 3rem 1.5rem 4rem;
-}
+/* =========================
+   Страницы кабинета (остальное)
+   ========================= */
 
 .dashboard-header-title {
   font-size: clamp(2rem, 2.6vw, 2.4rem);
@@ -442,8 +474,6 @@ body {
   color: var(--text-secondary);
   max-width: 40rem;
 }
-
-/* Табы "Задачи / Исполнители" */
 
 .dashboard-tabs {
   display: inline-flex;
@@ -475,8 +505,6 @@ body {
   box-shadow: 0 0 0 1px var(--accent);
 }
 
-/* Карточка / блок контента под табами */
-
 .dashboard-section {
   margin-top: 1.5rem;
   border-radius: 24px;
@@ -496,387 +524,52 @@ body {
   color: var(--text-secondary);
 }
 
-/* Профиль / личный кабинет */
+/* =========================
+   Tasks: карточки
+   ========================= */
 
-.profile-grid {
-  margin-top: 2rem;
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr);
-  gap: 1.75rem;
-}
-
-@media (max-width: 900px) {
-  .profile-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.profile-card {
-  padding: 1.6rem 1.8rem;
-}
-
-.profile-card-title {
-  font-size: 1.05rem;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-}
-
-.profile-card-description {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin-bottom: 1rem;
-}
-
-/* аватар и заголовки блоков в профиле */
-
-.profile-avatar {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.profile-avatar img {
-  width: 64px;
-  height: 64px;
-  border-radius: 999px;
-  object-fit: cover;
-  border: 1px солид var(--border-subtle);
-}
-
-profile-section-title {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-/* на всякий случай – пустые состояния задач (используется и в профиле при загрузке) */
-
-.tasks-empty {
-  padding: 1.5rem;
-  border-radius: 16px;
-  border: 1px dashed var(--border-subtle);
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-}
-
-/* Чат */
-
-.chat-shell {
-  margin-top: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  height: 60vh;
-  max-height: 600px;
-}
-
-.chat-messages-box {
-  flex: 1;
-  overflow-y: auto;
-  border-radius: 24px;
-  border: 1px solid var(--border-subtle);
-  padding: 0.9rem;
-  background: rgba(0, 0, 0, 0.35);
-  font-size: 0.9rem;
-}
-
-.chat-message-row {
-  display: flex;
-  margin-bottom: 0.5rem;
-}
-
-.chat-message-row.me {
-  justify-content: flex-end;
-}
-
-.chat-bubble {
-  max-width: 70%;
-  border-radius: 18px;
-  padding: 0.55rem 0.85rem;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-}
-
-.chat-bubble.me {
-  background-color: var(--accent);
-  color: #020617;
-}
-
-.chat-bubble.other {
-  background-color: rgba(15, 23, 42, 0.9);
-  color: var(--text-primary);
-  border: 1px solid var(--border-subtle);
-}
-
-.chat-bubble-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.2rem;
-  font-size: 0.7rem;
-  opacity: 0.75;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.chat-bubble-task {
-  font-size: 0.7rem;
-  opacity: 0.8;
-  margin-bottom: 0.25rem;
-}
-
-.chat-message-text {
-  white-space: pre-wrap;
-  font-size: 0.9rem;
-}
-
-.chat-message-attachment {
-  margin-top: 0.25rem;
-  font-size: 0.8rem;
-}
-
-.chat-message-attachment a {
-  color: var(--accent);
-  text-decoration: underline;
-}
-
-.chat-input-row {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-end;
-}
-
-/* чтобы инпут чата растягивался на всю ширину */
-.chat-input-row label {
-  flex: 1;
-}
-
-/* Плавающий виджет чата */
-
-.chat-widget-button {
-  position: fixed;
-  right: 1.5rem;
-  bottom: 1.5rem;
-  width: 52px;
-  height: 52px;
-  border-radius: 999px;
-  border: 1px solid var(--accent);
-  background-color: rgba(15, 23, 42, 0.95);
-  color: var(--accent);
-  font-size: 1.4rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
-  z-index: 40;
-}
-
-.chat-widget-button:hover {
-  background-color: rgba(15, 23, 42, 1);
-}
-
-@media (max-width: 640px) {
-  .chat-widget-button {
-    right: 1rem;
-    bottom: 1rem;
-    width: 46px;
-    height: 46px;
-  }
-}
-
-.chat-widget-panel {
-  position: fixed;
-  right: 1.5rem;
-  bottom: 1.5rem;
-  width: 360px;
-  max-height: 70vh;
-  border-radius: 24px;
-  border: 1px solid var(--border-subtle);
-  background: radial-gradient(circle at top left, #0f172a, #020617);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transform: translateY(120%);
-  opacity: 0;
-  pointer-events: none;
-  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
-  z-index: 50;
-}
-
-.chat-widget-panel--open {
-  transform: translateY(0);
-  opacity: 1;
-  pointer-events: auto;
-}
-
-@media (max-width: 640px) {
-  .chat-widget-panel {
-    right: 0.5rem;
-    bottom: 0.5rem;
-    width: calc(100% - 1rem);
-  }
-}
-
-.chat-widget-header {
-  padding: 0.75rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.chat-widget-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.chat-widget-subtitle {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-.chat-widget-close {
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 1.1rem;
-}
-
-/* селект выбора собеседника */
-
-.chat-widget-select {
-  padding: 0.5rem 1rem 0.25rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.chat-select {
-  margin-top: 0.35rem;
-  width: 100%;
-  padding: 0.35rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid var(--border-subtle);
-  background-color: rgba(15, 23, 42, 0.9);
-  color: var(--text-primary);
-  font-size: 0.8rem;
-}
-
-/* область сообщений */
-
-.chat-messages-box {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.75rem;
-  font-size: 0.9rem;
-}
-
-.chat-current-peer {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.5rem;
-}
-
-/* сообщения */
-
-.chat-message-row {
-  display: flex;
-  margin-bottom: 0.5rem;
-}
-
-.chat-message-row.me {
-  justify-content: flex-end;
-}
-
-.chat-bubble {
-  max-width: 80%;
-  border-radius: 18px;
-  padding: 0.5rem 0.75rem;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-}
-
-.chat-bubble.me {
-  background-color: var(--accent);
-  color: #020617;
-}
-
-.chat-bubble.other {
-  background-color: rgba(15, 23, 42, 0.9);
-  color: var(--text-primary);
-  border: 1px solid var(--border-subtle);
-}
-
-.chat-bubble-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.2rem;
-  font-size: 0.7rem;
-  opacity: 0.75;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.chat-bubble-task {
-  font-size: 0.7rem;
-  opacity: 0.8;
-  margin-bottom: 0.25rem;
-}
-
-.chat-message-text {
-  white-space: pre-wrap;
-  font-size: 0.9rem;
-}
-
-.chat-message-attachment {
-  margin-top: 0.25rem;
-  font-size: 0.8rem;
-}
-
-.chat-message-attachment a {
-  color: var(--accent);
-  text-decoration: underline;
-}
-
-/* инпут */
-
-.chat-input-row {
-  display: flex;
-  gap: 0.5rem;
-  padding: 0.6rem 0.75rem 0.75rem;
-  align-items: flex-end;
-}
-
-.chat-input-row label {
-  flex: 1;
-}
-
-/* ====== ТАСКИ: КАРТОЧКИ ====== */
-
+/* Чётко управляем количеством колонок: 1/2/3/4/5 */
 .tasks-grid {
-  margin-top: 1rem;
   display: grid;
   gap: 1rem;
-  /* чтобы карточки всегда прижимались к центру */
-  grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
-  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: 1fr;
 }
 
-/* один элемент – по центру (это уже было, пусть останется) */
-.tasks-grid.tasks-grid--single {
-  display: flex;
-  justify-content: center;
-  grid-template-columns: none;
+@media (min-width: 640px) {
+  .tasks-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
+@media (min-width: 1024px) {
+  .tasks-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .tasks-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* >= 1536px (2xl): 5 колонок */
+@media (min-width: 1536px) {
+  .tasks-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.tasks-grid > .task-card {
+  width: 100%;
+  max-width: none;
+}
+
+/* если где-то ставишь tasks-grid--single — не ломаем сетку */
 .tasks-grid.tasks-grid--single {
-  display: flex;
-  justify-content: center;
-  grid-template-columns: none;
+  grid-template-columns: minmax(280px, 1fr) !important;
 }
 
 .task-card {
@@ -889,18 +582,15 @@ profile-section-title {
   transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
-/* Новая задача — белая */
 .task-card--new {
   background-color: #ffffff;
   color: #020617;
 }
 
-/* Выполненная — зелёная */
 .task-card--done {
   background-color: #14532d;
 }
 
-/* Просроченная — красная */
 .task-card--overdue {
   background-color: #7f1d1d;
 }
@@ -977,39 +667,14 @@ profile-section-title {
 
 .tasks-empty {
   margin-top: 1rem;
-  font-size: 0.9rem;
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px dashed var(--border-subtle);
   color: var(--text-secondary);
+  font-size: 0.95rem;
 }
 
-.auth-title,
-.dashboard-header-title,
-.page-title,
-.landing-title,
-.landing-hero-title {
-  text-align: center;
-}
-
-.auth-title,
-.dashboard-header-title,
-.page-title,
-.landing-title,
-.landing-hero-title {
-  text-align: center;
-}
-
-/* текст сразу под заголовком – тоже по центру и аккуратно по ширине */
-
-.auth-title + p,
-.dashboard-header-title + p,
-.page-title + p,
-.landing-title + p,
-.landing-hero-title + p {
-  text-align: center;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* заголовок + плюс для страницы задач */
+/* Заголовок + плюс на Tasks */
 
 .tasks-header {
   margin-top: 1rem;
@@ -1031,8 +696,6 @@ profile-section-title {
   margin-left: auto;
   margin-right: auto;
 }
-
-/* кнопка-плюс справа от заголовка */
 
 .tasks-add-button {
   width: 34px;
@@ -1057,350 +720,9 @@ profile-section-title {
   transform: translateY(-1px);
 }
 
-/* таблица исполнителей – чуть аккуратнее */
-
-.executors-table {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.executors-table thead {
-  background-color: rgba(255, 255, 255, 0.02);
-}
-
-.executors-table th,
-.executors-table td {
-  font-size: 0.9rem;
-}
-
-/* шапка личного кабинета – по центру */
-
-.dashboard-header {
-  text-align: center;
-  margin-bottom: 1.5rem;
-}
-
-/* предупреждение по Telegram */
-
-.profile-telegram-warning {
-  margin-bottom: 1.5rem;
-}
-
-.profile-telegram-warning .landing-card-body {
-  padding: 0.9rem 1.1rem;
-}
-
-.profile-telegram-warning-text {
-  font-size: 0.9rem;
-}
-
-/* ====== ВЫДВИЖНОЙ ЧАТ С ИСПОЛНИТЕЛЯМИ ====== */
-
-.chat-dock-toggle {
-  position: fixed;
-  left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 40;
-
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  border: 1px solid var(--accent);
-  background-color: #020617;
-  color: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  cursor: pointer;
-
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
-  transition: background-color 0.15s ease, color 0.15s ease,
-    transform 0.1s ease, box-shadow 0.15s ease;
-}
-
-.chat-dock-toggle:hover {
-  background-color: var(--accent);
-  color: #000;
-  transform: translateY(-50%) translateX(1px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
-}
-
-/* затемнение фона при открытом доке */
-
-.chat-dock-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.45);
-  z-index: 39;
-}
-
-/* сама панель */
-
-.chat-dock-panel {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 0;
-
-  width: 320px;
-  max-width: 80vw;
-
-  background-color: #020617;
-  border-right: 1px solid var(--border-subtle);
-  box-shadow: 6px 0 18px rgba(0, 0, 0, 0.6);
-
-  transform: translateX(-100%);
-  transition: transform 0.2s ease-out;
-
-  z-index: 41;
-  display: flex;
-  flex-direction: column;
-}
-
-.chat-dock-panel--open {
-  transform: translateX(0);
-}
-
-.chat-dock-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 0.9rem;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.chat-dock-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.chat-dock-close {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 1.4rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.chat-dock-close:hover {
-  color: #fff;
-}
-
-.chat-dock-body {
-  padding: 0.5rem 0.4rem 0.75rem;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.chat-dock-info {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  padding: 0.5rem 0.75rem;
-}
-
-.chat-dock-info--error {
-  color: #fecaca;
-}
-
-.chat-dock-list {
-  list-style: none;
-  margin: 0;
-  padding: 0.25rem 0;
-}
-
-.chat-dock-list-item {
-  width: 100%;
-  border: none;
-  background: none;
-  text-align: left;
-  padding: 0.4rem 0.5rem;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  color: var(--text-primary);
-}
-
-.chat-dock-list-item:hover {
-  background-color: rgba(148, 163, 184, 0.12);
-}
-
-.chat-dock-list-item--active {
-  background: linear-gradient(
-    90deg,
-    rgba(234, 179, 8, 0.18),
-    rgba(234, 179, 8, 0.03)
-  );
-}
-
-.chat-dock-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #eab308, #f97316);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #000;
-}
-
-.chat-dock-list-text {
-  min-width: 0;
-}
-
-.chat-dock-list-name {
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.chat-dock-list-sub {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* таблица исполнителей – чуть аккуратнее */
-
-.executors-table {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.executors-table thead {
-  background-color: rgba(255, 255, 255, 0.02);
-}
-
-.executors-table th,
-.executors-table td {
-  font-size: 0.9rem;
-}
-
-.chat-dock-layout {
-  display: flex;
-  gap: 0.5rem;
-  height: 100%;
-}
-
-.chat-dock-peers {
-  width: 40%;
-  max-width: 180px;
-  border-right: 1px solid var(--border-subtle);
-  padding-right: 0.4rem;
-  overflow-y: auto;
-}
-
-.chat-dock-conversation {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.chat-dock-conversation-inner {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.25rem 0.25rem 0.5rem;
-}
-
-.chat-current-task {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.35rem;
-}
-
-.chat-current-task button {
-  border: none;
-  background: none;
-  padding: 0;
-  margin-left: 4px;
-  color: var(--accent);
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-/* кликабельное название задачи внутри пузыря */
-
-.chat-bubble-task-link {
-  border: none;
-  background: none;
-  padding: 0;
-  margin-bottom: 2px;
-  font-size: 0.8rem;
-  color: var(--accent);
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.executors-table-wrapper {
-  margin-top: 24px;
-  display: flex;
-  justify-content: center;
-}
-
-/* сама “карточка” вокруг таблицы */
-.executors-table-card {
-  width: 80%;
-  max-width: 960px;
-
-  border-radius: 16px;
-  border: 1px solid var(--accent);
-  background-color: #020617;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7);
-
-  padding: 12px 16px;
-}
-
-/* если надо совсем по центру, а таблица уже — выравниваем её */
-.executors-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.executors-table thead {
-  background-color: rgba(255, 255, 255, 0.04);
-}
-
-.executors-table th,
-.executors-table td {
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.executors-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.executors-table tbody tr:nth-child(even) {
-  background-color: rgba(148, 163, 184, 0.06);
-}
-
-.executors-table__actions-header {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.executors-table__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-/* чуть компактнее кнопки внутри таблицы */
-.executors-table__actions > button {
-  padding-inline: 10px;
-  font-size: 0.8rem;
-}
+/* =========================
+   Таблица исполнителей
+   ========================= */
 
 .executors-table-message {
   margin-top: 24px;
@@ -1413,15 +735,25 @@ profile-section-title {
   color: #fecaca;
 }
 
-.executors-table {
-  border-collapse: collapse;
-  width: 80%;
-  max-width: 960px;
+.executors-table-wrapper {
+  margin-top: 24px;
+  width: 100%;
+  overflow-x: auto;
+}
 
-  background-color: #020617;
+.executors-table-card {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.executors-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  background-color: transparent;
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid var(--border-subtle);
 }
 
 .executors-table thead {
@@ -1456,35 +788,30 @@ profile-section-title {
   white-space: nowrap;
 }
 
-/* чуть компактнее кнопки внутри таблицы */
 .executors-table__actions > button {
   padding-inline: 10px;
   font-size: 0.8rem;
 }
 
-/* ====== ТАБЛИЦА СТАТИСТИКИ ИСПОЛНИТЕЛЕЙ ====== */
+/* =========================
+   Таблица статистики исполнителей
+   ========================= */
 
 .stats-table-wrapper {
   margin-top: 24px;
-  display: flex;
-  justify-content: center;
+  width: 100%;
+  overflow-x: auto;
 }
 
 .stats-table-card {
-  width: 80%;
-  max-width: 960px;
-
-  border-radius: 16px;
-  border: 1px solid var(--border-subtle);
-  background-color: #020617;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7);
-
-  padding: 12px 16px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
-/* сама таблица внутри карточки */
 .stats-table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
 }
 
@@ -1507,4 +834,3 @@ profile-section-title {
 .stats-table tbody tr:nth-child(even) {
   background-color: rgba(148, 163, 184, 0.06);
 }
-

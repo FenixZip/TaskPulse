@@ -1,5 +1,6 @@
 // src/pages/dashboard/ExecutorsPage.tsx
 import { useAuth } from "../../shared/hooks/useAuth";
+
 import { InviteExecutorForm } from "../../features/users-management/invite-executor/ui/InviteExecutorForm";
 import { ExecutorsTable } from "../../features/users-management/executors-list/ui/ExecutorsTable";
 
@@ -30,14 +31,17 @@ export const ExecutorsPage = () => {
   return (
     <div className="page">
       <h1 className="page-title">Исполнители</h1>
-      <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-xl">
+      <p className="tasks-header-subtitle">
         Управляйте командой, приглашайте исполнителей и назначайте им задачи.
       </p>
 
-      <div className="mt-4 space-y-4 max-w-3xl">
+      <div className="mt-4 space-y-4">
         <InviteExecutorForm />
+        {/* В таблице уже есть кнопка "+" и модалка назначения */}
         <ExecutorsTable />
       </div>
     </div>
   );
 };
+
+export default ExecutorsPage;

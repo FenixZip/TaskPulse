@@ -8,7 +8,7 @@ const labelMap: Partial<Record<TaskStatus, string>> = {
   new: "Новая",
   in_progress: "В работе",
   done: "Выполнена",
-  overdue: "Просрочена",
+  overdue: "Нарушение",
 };
 
 export const TaskStatusBadge = ({ status }: Props) => {

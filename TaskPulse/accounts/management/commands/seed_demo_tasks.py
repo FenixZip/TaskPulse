@@ -12,260 +12,153 @@ from tasks.models import Task
 
 
 class Command(BaseCommand):
-    help = "Создаёт демо-сотрудников и задачи под пользователя fenix15@inbox.ru"
+    help = "Создаёт 10–15 демо-пользователей, каждому по 8 задач, всем назначает Telegram ID"
 
     CREATOR_EMAIL = "fenix15@inbox.ru"
     DEMO_PREFIX = "[DEMO]"
     DEMO_EMAIL_DOMAIN = "example.com"
+    DEMO_PASSWORD = "Demo12345!"
 
-    # Человеческие статусы -> enum модели
-    # (на случай, если где-то захочешь печатать/логировать)
-    HUMAN_STATUS = {
-        "NEW": "Новая",
-        "OVERDUE": "Дедлайн нарушен",
-        "DONE": "Выполнено",
-    }
+    TELEGRAM_ID_START = 7000000000  # безопасный диапазон
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "--reset",
-            action="store_true",
-            help="Удалить старые DEMO-задачи перед созданием новых",
-        )
+        parser.add_argument("--reset", action="store_true")
+        parser.add_argument("--people", type=int, default=12)
 
+    # ---------- Telegram ----------
+    def attach_telegram(self, user, telegram_id: int):
+        """
+        Безопасно создаёт TelegramProfile для пользователя
+        """
+        try:
+            from integrations.telegram.models import TelegramProfile
+        except Exception:
+            return  # интеграции нет — просто пропускаем
+
+        profile, _ = TelegramProfile.objects.get_or_create(user=user)
+
+        if hasattr(profile, "telegram_user_id"):
+            profile.telegram_user_id = telegram_id
+        if hasattr(profile, "chat_id"):
+            profile.chat_id = telegram_id
+
+        profile.save()
+
+    # ---------- Main ----------
     def handle(self, *args, **options):
+        people = options["people"]
         reset = options["reset"]
+
+        if not 10 <= people <= 15:
+            raise CommandError("--people должен быть в диапазоне 10–15")
+
         User = get_user_model()
 
         try:
             creator = User.objects.get(email=self.CREATOR_EMAIL)
         except User.DoesNotExist:
-            raise CommandError(f"User {self.CREATOR_EMAIL} not found")
-
-        self.stdout.write(self.style.SUCCESS(
-            f"Используем создателя: {creator.full_name} <{creator.email}>"
-        ))
-        self.stdout.write(f"Компания: {getattr(creator, 'company', None) or '— не указана —'}")
+            raise CommandError(f"Создатель {self.CREATOR_EMAIL} не найден")
 
         if reset:
-            deleted, _ = Task.objects.filter(
+            Task.objects.filter(
                 creator=creator,
                 title__startswith=self.DEMO_PREFIX
             ).delete()
-            self.stdout.write(self.style.WARNING(f"Удалено DEMO-задач: {deleted}"))
 
-        employees_data = [
-            {"full_name": "Дарья Попова", "position": "Бухгалтер", "category": "finance"},
-            {"full_name": "Николай Царевич", "position": "Супервизор", "category": "people_management"},
-            {"full_name": "Маша Иванова", "position": "HR-менеджер", "category": "hr"},
-            {"full_name": "Пётр Трактовский", "position": "Начальник охраны", "category": "security"},
-            {"full_name": "Иван Смирнов", "position": "Маркетолог", "category": "marketing"},
-            {"full_name": "Ольга Кузнецова", "position": "Юрист", "category": "legal"},
-            {"full_name": "Сергей Петров", "position": "Логист", "category": "logistics"},
-            {"full_name": "Анна Фролова", "position": "Проектный менеджер", "category": "projects"},
-            {"full_name": "Егор Соколов", "position": "IT-специалист", "category": "it"},
-            {"full_name": "Алексей Морозов", "position": "Финансовый аналитик", "category": "finance"},
-            {"full_name": "Екатерина Лебедева", "position": "Специалист по закупкам", "category": "logistics"},
-            {"full_name": "Дмитрий Орлов", "position": "Руководитель смены", "category": "people_management"},
-            {"full_name": "Светлана Романова", "position": "Специалист по обучению персонала", "category": "hr"},
-            {"full_name": "Виталий Киселёв", "position": "Инженер по безопасности", "category": "security"},
-            {"full_name": "Татьяна Белова", "position": "Офис-менеджер", "category": "projects"},
-            {"full_name": "Артём Захаров", "position": "Бизнес-аналитик", "category": "projects"},
-        ]
-
-        tasks_by_category = {
-            "finance": [
-                "Подготовить финансовый отчёт",
-                "Проверить корректность платежей",
-                "Проанализировать расходы",
-                "Подготовить прогноз бюджета",
-                "Проверить финансовые документы",
-                "Сверить отчёт с банком",
-                "Подготовить данные для руководства",
-                "Проанализировать отклонения бюджета",
-                "Проверить налоговые начисления",
-                "Сформировать финансовую аналитику",
-            ],
-            "people_management": [
-                "Контроль выполнения задач команды",
-                "Провести собрание смены",
-                "Оценить эффективность сотрудников",
-                "Составить график работы",
-                "Разобрать проблемные кейсы",
-                "Провести 1:1 встречи",
-                "Настроить мотивацию команды",
-                "Проконтролировать дисциплину",
-                "Сформировать отчёт по персоналу",
-                "Проверить адаптацию новичков",
-            ],
-            "hr": [
-                "Провести собеседование",
-                "Подготовить онбординг",
-                "Обновить кадровые документы",
-                "Организовать обучение",
-                "Провести оценку персонала",
-                "Подготовить HR-отчёт",
-                "Согласовать отпуск",
-                "Проанализировать текучесть",
-                "Подготовить оффер",
-                "Обновить HR-политику",
-            ],
-            "security": [
-                "Проверить систему безопасности",
-                "Провести инструктаж",
-                "Проверить журналы доступа",
-                "Контроль видеонаблюдения",
-                "Проверить тревожную сигнализацию",
-                "Провести обход территории",
-                "Подготовить отчёт по инцидентам",
-                "Проверить посты охраны",
-                "Обновить допуски",
-                "Контроль СКУД",
-            ],
-            "marketing": [
-                "Подготовить контент",
-                "Проанализировать рекламу",
-                "Подготовить отчёт по лидам",
-                "Провести анализ конкурентов",
-                "Обновить сайт",
-                "Согласовать креативы",
-                "Запустить рассылку",
-                "Подготовить презентацию",
-                "Проанализировать воронку",
-                "Настроить кампанию",
-            ],
-            "legal": [
-                "Проверить договор",
-                "Подготовить правовое заключение",
-                "Проконсультировать сотрудника",
-                "Обновить реестр договоров",
-                "Подготовить претензию",
-                "Проверить документы",
-                "Проанализировать риски",
-                "Подготовить отчёт",
-                "Проверить соответствие закону",
-                "Согласовать изменения",
-            ],
-            "logistics": [
-                "Составить график поставок",
-                "Проверить складские остатки",
-                "Оптимизировать маршрут",
-                "Подготовить документы",
-                "Проверить сроки доставки",
-                "Контроль отгрузок",
-                "Согласовать поставку",
-                "Проверить возвраты",
-                "Подготовить логистический отчёт",
-                "Обновить данные в системе",
-            ],
-            "projects": [
-                "Обновить план проекта",
-                "Подготовить статус-отчёт",
-                "Провести встречу",
-                "Контроль сроков",
-                "Согласовать изменения",
-                "Обновить документацию",
-                "Провести ретроспективу",
-                "Оценить риски",
-                "Подготовить презентацию",
-                "Проверить загрузку команды",
-            ],
-            "it": [
-                "Проверить систему",
-                "Обновить ПО",
-                "Настроить доступы",
-                "Проверить логи",
-                "Провести бэкап",
-                "Оптимизировать БД",
-                "Провести тестирование",
-                "Настроить мониторинг",
-                "Обработать тикеты",
-                "Обновить документацию",
-            ],
-        }
-
-        # Отключаем сигнал отправки email-верификации на время сидирования
+        # отключаем email-сигналы
         from accounts.signals import send_email_verification
         post_save.disconnect(send_email_verification, sender=User)
 
+        employees_data = [
+            ("Дарья Попова", "Бухгалтер"),
+            ("Николай Царевич", "Супервизор"),
+            ("Маша Иванова", "HR-менеджер"),
+            ("Пётр Трактовский", "Начальник охраны"),
+            ("Иван Смирнов", "Маркетолог"),
+            ("Ольга Кузнецова", "Юрист"),
+            ("Сергей Петров", "Логист"),
+            ("Анна Фролова", "Проектный менеджер"),
+            ("Егор Соколов", "IT-специалист"),
+            ("Алексей Морозов", "Финансовый аналитик"),
+            ("Екатерина Лебедева", "Специалист по закупкам"),
+            ("Дмитрий Орлов", "Руководитель смены"),
+            ("Светлана Романова", "Специалист по обучению"),
+            ("Виталий Киселёв", "Инженер по безопасности"),
+            ("Татьяна Белова", "Офис-менеджер"),
+        ][:people]
+
+        employees = []
+
         try:
-            employees = []
-            for i, data in enumerate(employees_data, start=1):
+            for i, (name, position) in enumerate(employees_data, start=1):
                 email = f"demo_employee_{i}@{self.DEMO_EMAIL_DOMAIN}"
 
                 user, created = User.objects.get_or_create(
                     email=email,
                     defaults={
-                        "full_name": data["full_name"],
-                        "position": data["position"],
-                        "company": getattr(creator, "company", None),
+                        "full_name": name,
+                        "position": position,
+                        "company": creator.company,
                         "role": User.Role.EXECUTOR,
                         "is_active": True,
                     },
                 )
 
-                # если уже существовал — обновим данные под демо-список
-                changed = False
-                if getattr(user, "full_name", None) != data["full_name"]:
-                    user.full_name = data["full_name"]
-                    changed = True
-                if getattr(user, "position", None) != data["position"]:
-                    user.position = data["position"]
-                    changed = True
-                if getattr(user, "company", None) != getattr(creator, "company", None):
-                    user.company = getattr(creator, "company", None)
-                    changed = True
-                if changed:
+                if created:
+                    user.set_password(self.DEMO_PASSWORD)
                     user.save()
 
-                if created:
-                    user.set_password("Demo12345!")
-                    user.save(update_fields=["password"])
+                # Telegram ID — всегда есть
+                telegram_id = self.TELEGRAM_ID_START + i
+                self.attach_telegram(user, telegram_id)
 
-                user._category = data["category"]
                 employees.append(user)
 
         finally:
             post_save.connect(send_email_verification, sender=User)
 
-        # === задачи со статусами: Новая / Дедлайн нарушен / Выполнено ===
-
+        # ---------- Tasks ----------
         now = timezone.now()
+        statuses = [Task.Status.NEW, Task.Status.OVERDUE, Task.Status.DONE]
 
-        # Статусы модели (enum)
-        STATUS_NEW = Task.Status.NEW
-        STATUS_OVERDUE = Task.Status.OVERDUE
-        STATUS_DONE = Task.Status.DONE
+        task_titles = [
+            "Подготовить отчёт",
+            "Согласовать план работ",
+            "Проверить входящие задачи",
+            "Обновить документацию",
+            "Провести встречу",
+            "Собрать статусы",
+            "Разобрать блокеры",
+            "Подготовить презентацию",
+        ]
 
-        statuses = [STATUS_NEW, STATUS_OVERDUE, STATUS_DONE]
+        total_tasks = 0
 
         for user in employees:
-            titles = tasks_by_category[user._category]
-
-            for i in range(10):
+            for i in range(8):
                 status = random.choice(statuses)
 
-                if status == STATUS_NEW:
-                    # новая: дедлайн в будущем
+                if status == Task.Status.NEW:
                     due_at = now + timedelta(days=random.randint(1, 14))
-                elif status == STATUS_OVERDUE:
-                    # дедлайн нарушен: дедлайн в прошлом
+                elif status == Task.Status.OVERDUE:
                     due_at = now - timedelta(days=random.randint(1, 14))
                 else:
-                    # выполнено: можно сделать дедлайн в прошлом или рядом с текущей датой
-                    # (это влияет только на отображение, статус всё равно "выполнено")
                     due_at = now + timedelta(days=random.randint(-7, 7))
 
                 Task.objects.create(
-                    title=f"{self.DEMO_PREFIX} {titles[i % len(titles)]}",
+                    title=f"{self.DEMO_PREFIX} {task_titles[i]}",
                     description=f"Демо-задача для {user.full_name}",
-                    priority=random.choice([Task.Priority.LOW, Task.Priority.MEDIUM, Task.Priority.HIGH]),
+                    priority=random.choice(
+                        [Task.Priority.LOW, Task.Priority.MEDIUM, Task.Priority.HIGH]
+                    ),
                     status=status,
                     due_at=due_at,
                     creator=creator,
                     assignee=user,
                 )
+                total_tasks += 1
 
         self.stdout.write(self.style.SUCCESS(
-            f"Готово! Создано {len(employees)} сотрудников и {len(employees) * 10} задач."
+            f"Готово: {len(employees)} пользователей, {total_tasks} задач. "
+            f"Telegram ID назначен всем."
         ))

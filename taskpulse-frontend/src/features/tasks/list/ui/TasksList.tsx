@@ -32,7 +32,7 @@ const getStatusLabel = (status: Task["status"]): string => {
     case "in_progress":
       return "В работе";
     case "overdue":
-      return "Просрочена";
+      return "Нарушение";
     case "new":
     default:
       return "Новая";
@@ -54,7 +54,7 @@ const getCardColorClass = (task: Task): string => {
   }
 
   if (isOverdue) {
-    // просрочена — красная
+    // Нарушение — красная
     return "task-card task-card--overdue";
   }
 

@@ -1,20 +1,12 @@
-// src/features/users-management/executors-list/ui/ExecutorsChatDock.tsx
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
+
+import styles from "./ExecutorsChatDock.module.css";
 
 import { useAuth } from "../../../../shared/hooks/useAuth";
 import { Input } from "../../../../shared/ui/Input";
 import { Button } from "../../../../shared/ui/Button";
-import {
-  useTaskChat,
-  type ChatMessage,
-} from "../../../chat/task-chat/model/useTaskChat";
+import { useTaskChat, type ChatMessage } from "../../../chat/task-chat/model/useTaskChat";
 import { useTasks } from "../../../tasks/list/model/useTasks";
 import { useExecutors, type Executor } from "../model/useExecutors";
 import type { Task } from "../../../../entities/task/model/types";
@@ -45,30 +37,28 @@ export const ExecutorsChatDock = () => {
   const { auth } = useAuth();
   const role = normalizeRole(auth.user?.role);
 
-  // состояние дока / чата
+  // Рендерим dock только внутри /app (чтобы не мешал гостевым страницам)
+  if (!role || !location.pathname.startsWith("/app")) return null;
+
   const [isOpen, setIsOpen] = useState(false);
   const [peerId, setPeerId] = useState<number | null>(null);
   const [text, setText] = useState("");
 
-  // контекст задачи (когда чат открыт из карточки)
   const [taskContextId, setTaskContextId] = useState<number | null>(null);
   const [taskContextTitle, setTaskContextTitle] = useState<string | null>(null);
 
-  // создатель – список исполнителей
   const {
     data: executors = [],
     isLoading: isExecutorsLoading,
     isError: isExecutorsError,
   } = useExecutors();
 
-  // исполнитель – список задач (чтобы вытащить создателей)
   const {
     data: tasks = [],
     isLoading: isTasksLoading,
     isError: isTasksError,
   } = useTasks();
 
-  // формируем список собеседников в зависимости от роли
   const peers: PeerInfo[] = useMemo(() => {
     if (role === "creator") {
       return (executors as Executor[]).map((ex) => ({
@@ -78,16 +68,14 @@ export const ExecutorsChatDock = () => {
       }));
     }
 
-    // executor: создатели задач
+    // executor: соберём уникальных создателей из задач
     const map = new Map<number, PeerInfo>();
     (tasks as Task[]).forEach((task) => {
       if (!task.creator) return;
       if (!map.has(task.creator)) {
         map.set(task.creator, {
           id: task.creator,
-          name:
-            task.creator_name ||
-            `Создатель #${task.creator.toString()}`,
+          name: task.creator_name || `Создатель #${String(task.creator)}`,
           sub: task.creator_company || task.creator_position || null,
         });
       }
@@ -98,41 +86,31 @@ export const ExecutorsChatDock = () => {
   const isPeersLoading = role === "creator" ? isExecutorsLoading : isTasksLoading;
   const isPeersError = role === "creator" ? isExecutorsError : isTasksError;
 
-  // выбираем первого собеседника по умолчанию
   useEffect(() => {
     if (!peers.length) return;
     setPeerId((prev) => (prev === null ? peers[0].id : prev));
   }, [peers]);
 
-  // слушаем глобальное событие "open-chat-from-task" из TasksList
+  // Открытие из задач (custom event)
   useEffect(() => {
     const handler = (e: Event) => {
       const custom = e as CustomEvent<OpenChatFromTaskDetail>;
       const detail = custom.detail;
-      if (!detail || !detail.peerId) return;
+      if (!detail?.peerId) return;
 
       setIsOpen(true);
       setPeerId(detail.peerId);
       setTaskContextId(detail.taskId ?? null);
       setTaskContextTitle(detail.taskTitle ?? null);
 
-      // если в инпуте ничего нет — подставляем название задачи
-      if (detail.taskTitle && !text) {
-        setText(detail.taskTitle + ": ");
-      }
+      if (detail.taskTitle && !text) setText(detail.taskTitle + ": ");
     };
 
     window.addEventListener("open-chat-from-task", handler as EventListener);
-    return () => {
-      window.removeEventListener(
-        "open-chat-from-task",
-        handler as EventListener,
-      );
-    };
+    return () => window.removeEventListener("open-chat-from-task", handler as EventListener);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
 
-  // данные чата
   const {
     data: messages = [],
     isLoading: isChatLoading,
@@ -145,21 +123,15 @@ export const ExecutorsChatDock = () => {
     taskId: taskContextId ?? undefined,
   });
 
-  const sortedMessages = useMemo(
-    () =>
-      [...messages].sort(
-        (a, b) =>
-          new Date(a.created_at).getTime() -
-          new Date(b.created_at).getTime(),
-      ),
-    [messages],
-  );
+  const sortedMessages = useMemo(() => {
+    return [...messages].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+  }, [messages]);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (isOpen) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    if (isOpen) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [sortedMessages.length, isOpen]);
 
   const handleSubmit = (e: FormEvent) => {
@@ -179,17 +151,15 @@ export const ExecutorsChatDock = () => {
 
   const renderMessages = () => {
     if (!peerId) {
-      if (isPeersLoading) return <p>Загружаем список…</p>;
-      if (isPeersError) return <p>Не удалось загрузить список.</p>;
-      if (!peers.length) return <p>Нет собеседников для чата.</p>;
-      return <p>Выберите собеседника слева.</p>;
+      if (isPeersLoading) return <div className={styles.info}>Загружаем список…</div>;
+      if (isPeersError) return <div className={`${styles.info} ${styles.infoError}`}>Не удалось загрузить список.</div>;
+      if (!peers.length) return <div className={styles.info}>Нет собеседников для чата.</div>;
+      return <div className={styles.info}>Выберите собеседника слева.</div>;
     }
 
-    if (isChatLoading) return <p>Загружаем сообщения…</p>;
-    if (isChatError) return <p>Не удалось загрузить сообщения.</p>;
-    if (!sortedMessages.length) {
-      return <p>Сообщений пока нет — напишите первое ✍️</p>;
-    }
+    if (isChatLoading) return <div className={styles.info}>Загружаем сообщения…</div>;
+    if (isChatError) return <div className={`${styles.info} ${styles.infoError}`}>Не удалось загрузить сообщения.</div>;
+    if (!sortedMessages.length) return <div className={styles.info}>Сообщений пока нет — напишите первое ✍️</div>;
 
     return (
       <>
@@ -200,106 +170,54 @@ export const ExecutorsChatDock = () => {
     );
   };
 
-  // если не авторизованы или не в /app — ничего не рисуем
-  if (!role || !location.pathname.startsWith("/app")) {
-    return null;
-  }
-
   return (
     <>
-      {/* плавающая кнопка слева */}
       <button
         type="button"
-        className="chat-dock-toggle"
-        onClick={() => setIsOpen((prev) => !prev)}
+        className={styles.toggle}
+        onClick={() => setIsOpen((p) => !p)}
         aria-label="Открыть чат"
       >
         💬
       </button>
 
-      {isOpen && (
-        <div
-          className="chat-dock-backdrop"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {isOpen && <div className={styles.backdrop} onClick={() => setIsOpen(false)} />}
 
-      <aside
-        className={
-          "chat-dock-panel" +
-          (isOpen ? " chat-dock-panel--open" : "")
-        }
-        aria-hidden={!isOpen}
-      >
-        <div className="chat-dock-header">
-          <span className="chat-dock-title">
-            {role === "creator"
-              ? "Чат с исполнителями"
-              : "Чат с постановщиками"}
+      <aside className={`${styles.panel} ${isOpen ? styles.panelOpen : ""}`} aria-hidden={!isOpen}>
+        <div className={styles.header}>
+          <span className={styles.title}>
+            {role === "creator" ? "Чат с исполнителями" : "Чат с постановщиками"}
           </span>
-          <button
-            type="button"
-            className="chat-dock-close"
-            onClick={() => setIsOpen(false)}
-            aria-label="Закрыть"
-          >
+          <button type="button" className={styles.close} onClick={() => setIsOpen(false)} aria-label="Закрыть">
             ×
           </button>
         </div>
 
-        <div className="chat-dock-body">
-          <div className="chat-dock-layout">
-            {/* слева – список собеседников */}
-            <div className="chat-dock-peers">
-              {isPeersLoading && (
-                <div className="chat-dock-info">
-                  Загружаем список…
-                </div>
-              )}
-              {isPeersError && (
-                <div className="chat-dock-info chat-dock-info--error">
-                  Не удалось загрузить список.
-                </div>
-              )}
-
-              {!isPeersLoading && !isPeersError && !peers.length && (
-                <div className="chat-dock-info">
-                  Нет пользователей для чата.
-                </div>
-              )}
+        <div className={styles.body}>
+          <div className={styles.layout}>
+            <div className={styles.peers}>
+              {isPeersLoading && <div className={styles.info}>Загружаем список…</div>}
+              {isPeersError && <div className={`${styles.info} ${styles.infoError}`}>Не удалось загрузить список.</div>}
 
               {!isPeersLoading && !isPeersError && peers.length > 0 && (
-                <ul className="chat-dock-list">
+                <ul className={styles.list}>
                   {peers.map((p) => {
                     const isActive = peerId === p.id;
                     return (
                       <li key={p.id}>
                         <button
                           type="button"
-                          className={
-                            "chat-dock-list-item" +
-                            (isActive
-                              ? " chat-dock-list-item--active"
-                              : "")
-                          }
+                          className={`${styles.listItem} ${isActive ? styles.listItemActive : ""}`}
                           onClick={() => {
                             setPeerId(p.id);
                             setTaskContextId(null);
                             setTaskContextTitle(null);
                           }}
                         >
-                          <div className="chat-dock-avatar">
-                            {p.name[0]?.toUpperCase() ?? "?"}
-                          </div>
-                          <div className="chat-dock-list-text">
-                            <div className="chat-dock-list-name">
-                              {p.name}
-                            </div>
-                            {p.sub && (
-                              <div className="chat-dock-list-sub">
-                                {p.sub}
-                              </div>
-                            )}
+                          <div className={styles.avatar}>{p.name[0]?.toUpperCase() ?? "?"}</div>
+                          <div className={styles.listText}>
+                            <div className={styles.listName}>{p.name}</div>
+                            {p.sub && <div className={styles.listSub}>{p.sub}</div>}
                           </div>
                         </button>
                       </li>
@@ -307,45 +225,35 @@ export const ExecutorsChatDock = () => {
                   })}
                 </ul>
               )}
+
+              {!isPeersLoading && !isPeersError && !peers.length && (
+                <div className={styles.info}>Нет пользователей для чата.</div>
+              )}
             </div>
 
-            {/* справа – диалог */}
-            <div className="chat-dock-conversation">
-              <div className="chat-dock-conversation-inner">
-                {currentPeer && (
-                  <div className="chat-current-peer">
-                    Собеседник:{" "}
-                    <strong>{currentPeer.name}</strong>
-                  </div>
-                )}
-
-                {taskContextTitle && (
-                  <div className="chat-current-task">
-                    Задача:{" "}
-                    <button
-                      type="button"
-                      onClick={handleOpenTaskFromContext}
-                    >
-                      {taskContextTitle}
-                    </button>
-                  </div>
-                )}
-
-                <div className="chat-messages-box">
-                  {renderMessages()}
-                  <div ref={bottomRef} />
+            <div className={styles.conversation}>
+              {currentPeer && (
+                <div className={styles.meta}>
+                  Собеседник: <strong>{currentPeer.name}</strong>
                 </div>
+              )}
+
+              {taskContextTitle && (
+                <div className={styles.meta}>
+                  Задача:
+                  <button type="button" onClick={handleOpenTaskFromContext}>
+                    {taskContextTitle}
+                  </button>
+                </div>
+              )}
+
+              <div className={styles.messages}>
+                {renderMessages()}
+                <div ref={bottomRef} />
               </div>
 
-              <form
-                onSubmit={handleSubmit}
-                className="chat-input-row"
-              >
-                <Input
-                  placeholder="Напишите сообщение…"
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                />
+              <form onSubmit={handleSubmit} className={styles.inputRow}>
+                <Input placeholder="Напишите сообщение…" value={text} onChange={(e) => setText(e.target.value)} />
                 <Button type="submit" loading={isSending}>
                   →
                 </Button>
@@ -358,7 +266,6 @@ export const ExecutorsChatDock = () => {
   );
 };
 
-// пузырь сообщения
 const ChatMessageBubble = ({ msg }: { msg: ChatMessage }) => {
   const { auth } = useAuth();
   const myRole = normalizeRole(auth.user?.role ?? null);
@@ -376,52 +283,26 @@ const ChatMessageBubble = ({ msg }: { msg: ChatMessage }) => {
   };
 
   return (
-    <div
-      className={
-        "chat-message-row" +
-        (isMine ? " me" : " other")
-      }
-    >
-      <div
-        className={
-          "chat-bubble" + (isMine ? " me" : " other")
-        }
-      >
-        <div className="chat-bubble-header">
-          <span className="chat-bubble-sender">
-            {msg.sender_name}
-          </span>
-          <span className="chat-bubble-time">
-            {new Date(msg.created_at).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+    <div className={`${styles.row} ${isMine ? styles.rowMine : styles.rowOther}`}>
+      <div className={`${styles.bubble} ${isMine ? styles.bubbleMine : ""}`}>
+        <div className={styles.bubbleHeader}>
+          <span className={styles.sender}>{msg.sender_name}</span>
+          <span className={styles.time}>
+            {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
         </div>
 
         {msg.task_title && (
-          <button
-            type="button"
-            className="chat-bubble-task-link"
-            onClick={handleOpenTask}
-          >
+          <button type="button" className={styles.taskLink} onClick={handleOpenTask}>
             {msg.task_title}
           </button>
         )}
 
-        {msg.text && (
-          <div className="chat-message-text">
-            {msg.text}
-          </div>
-        )}
+        {msg.text && <div className={styles.text}>{msg.text}</div>}
 
         {msg.file_url && (
-          <div className="chat-message-attachment">
-            <a
-              href={msg.file_url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+          <div className={styles.attachment}>
+            <a href={msg.file_url} target="_blank" rel="noopener noreferrer">
               Вложение
             </a>
           </div>

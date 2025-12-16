@@ -229,11 +229,8 @@ def notify_task_message(message: TaskMessage) -> None:
 
     link = build_task_link(task.id)
 
-    sender_name = (
-        getattr(sender, "full_name", "")
-        or sender.get_full_name()
-        or sender.email
-    )
+    full_name = (getattr(sender, "full_name", "") or "").strip()
+    sender_name = full_name if full_name else sender.email
 
     # обрезаем сообщение, чтобы не слать огромный текст
     text_preview = (message.text or "").strip()
@@ -241,7 +238,7 @@ def notify_task_message(message: TaskMessage) -> None:
         text_preview = text_preview[:297] + "..."
 
     text_lines: list[str] = [
-        "📩 <b>Новое сообщение по задаче</b>",
+        "<b>Новое сообщение по задаче</b>",
         "",
         f"<b>{task.title}</b>",
         "",
@@ -337,7 +334,7 @@ def notify_task_message(message: TaskMessage) -> None:
         text_preview = text_preview[:297] + "..."
 
     text_lines: list[str] = [
-        "📩 <b>Новое сообщение по задаче</b>",
+        "<b>Новое сообщение по задаче</b>",
         "",
         f"<b>{task.title}</b>",
         "",

@@ -33,13 +33,13 @@ load_dotenv(BASE_DIR / "../.env")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 raw_hosts = os.getenv("ALLOWED_HOSTS", "")
-ALLOWED_HOSTS = [h.strip() for h in raw_hosts.split(",") if h.strip()]
-# ALLOWED_HOSTS = [
-#     "localhost",
-#     "127.0.0.1",
-#     "two-mangos-sit.loca.lt",
-#     ".loca.lt",
-# ]
+# ALLOWED_HOSTS = [h.strip() for h in raw_hosts.split(",") if h.strip()]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "two-mangos-sit.loca.lt",
+    ".loca.lt",
+]
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
