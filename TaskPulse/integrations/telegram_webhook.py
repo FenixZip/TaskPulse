@@ -12,13 +12,12 @@ from django.http import HttpRequest, JsonResponse, HttpResponseForbidden
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+from tasks.models import Task, TaskMessage
 from .models import TelegramProfile, TelegramLinkToken
 from .notifications import send_telegram_message
-from tasks.models import Task, TaskMessage
 
 logger = logging.getLogger(__name__)
 
-# Ищем ссылки вида /tasks/<id> (они уже есть в уведомлениях)
 TASK_LINK_RE = re.compile(r"/tasks/(\d+)")
 
 
@@ -36,6 +35,7 @@ def _extract_message(update: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 def _extract_task_id_from_text(text: str) -> Optional[int]:
     """Пытаемся вытащить ID задачи из ссылки .../tasks/<id>."""
+
     match = TASK_LINK_RE.search(text)
     if not match:
         return None
@@ -46,20 +46,20 @@ def _extract_task_id_from_text(text: str) -> Optional[int]:
 
 
 def _handle_start_command(
-    chat_id: int,
-    text: str,
-    from_user: Dict[str, Any],
+        chat_id: int,
+        text: str,
+        from_user: Dict[str, Any],
 ) -> None:
     """
     Обработка /start и /start <token>.
     """
+
     parts = text.split(maxsplit=1)
 
-    # Просто /start без токена
     if len(parts) == 1:
         send_telegram_message(
             chat_id,
-            "Привет! Чтобы привязать Telegram к вашему аккаунту TaskPulse, "
+            "Привет! Чтобы привязать Telegram к вашему аккаунту Pulse-zone.tech, "
             "перейдите по ссылке из личного кабинета и нажмите кнопку "
             "«Привязать Telegram».",
         )
@@ -77,7 +77,7 @@ def _handle_start_command(
     except TelegramLinkToken.DoesNotExist:
         send_telegram_message(
             chat_id,
-            "⚠️ Ссылка для привязки недействительна или уже была использована.",
+            "Ссылка для привязки недействительна или уже была использована.",
         )
         return
 
@@ -99,7 +99,7 @@ def _handle_start_command(
 
     send_telegram_message(
         profile.chat_id,
-        "✅ Telegram успешно привязан к вашему аккаунту TaskPulse.\n\n"
+        "Telegram успешно привязан к вашему аккаунту Pulse-zone.tech.\n\n"
         "Теперь вы будете получать уведомления о задачах и дедлайнах здесь.",
     )
 
@@ -107,7 +107,7 @@ def _handle_start_command(
 def _handle_help_command(chat_id: int) -> None:
     send_telegram_message(
         chat_id,
-        "Я бот TaskPulse.\n\n"
+        "Я бот Pulse-zone.tech.\n\n"
         "Я отправляю уведомления о задачах, комментариях и дедлайнах.\n"
         "Чтобы ответить в чат задачи с сайта — просто ответьте (Reply) на "
         "моё сообщение по этой задаче.",
@@ -115,14 +115,15 @@ def _handle_help_command(chat_id: int) -> None:
 
 
 def _handle_task_chat_message(
-    message: Dict[str, Any],
-    chat_id: int,
-    tg_user_id: Optional[int],
+        message: Dict[str, Any],
+        chat_id: int,
+        tg_user_id: Optional[int],
 ) -> None:
     """
     Обычное сообщение (НЕ команда).
     Если это reply на уведомление по задаче — создаём TaskMessage в БД.
     """
+
     if tg_user_id is None:
         return
 
@@ -132,7 +133,6 @@ def _handle_task_chat_message(
 
     reply_to = message.get("reply_to_message")
     if not reply_to:
-        # Пользователь пишет не в ответ — подсказываем, как правильно
         send_telegram_message(
             chat_id,
             "Чтобы отправить сообщение в чат задачи, ответьте (Reply) "
@@ -151,7 +151,6 @@ def _handle_task_chat_message(
         )
         return
 
-    # Находим профиль и пользователя
     try:
         profile = TelegramProfile.objects.select_related("user").get(
             telegram_user_id=tg_user_id
@@ -164,7 +163,6 @@ def _handle_task_chat_message(
         )
         return
 
-    # Находим задачу
     try:
         task = Task.objects.get(pk=task_id)
     except Task.DoesNotExist:
@@ -174,33 +172,21 @@ def _handle_task_chat_message(
         )
         return
 
-    # Создаём сообщение в чате задачи
     TaskMessage.objects.create(
         task=task,
-        sender=profile.user,  # ВАЖНО: поле называется sender
+        sender=profile.user,
         text=text,
     )
-    # Сигнал post_save TaskMessage вызовет notify_task_message,
-    # и второму участнику придёт уведомление.
 
     send_telegram_message(
         chat_id,
-        "💬 Ваше сообщение отправлено в чат задачи на сайте.",
+        "Ваше сообщение отправлено в чат задачи на сайте.",
     )
 
 
 @csrf_exempt
 def telegram_webhook(request: HttpRequest, secret: str) -> JsonResponse:
-    """
-    Обработчик вебхука Telegram.
-
-    URL: /api/integrations/telegram/webhook/<secret>/
-
-    Поддерживаем:
-    - /start <token>  — привязка Telegram к пользователю
-    - /help           — помощь
-    - обычные сообщения (reply на уведомление по задаче) -> TaskMessage
-    """
+    """Обработчик вебхука Telegram."""
 
     expected_secret = _get_setting("TELEGRAM_WEBHOOK_SECRET")
     if expected_secret and secret != expected_secret:
@@ -231,7 +217,6 @@ def telegram_webhook(request: HttpRequest, secret: str) -> JsonResponse:
         from_user = message.get("from", {}) or {}
         tg_user_id = from_user.get("id")
 
-        # Команды
         if text.startswith("/start"):
             _handle_start_command(chat_id, text, from_user)
             return JsonResponse({"ok": True})
@@ -240,11 +225,9 @@ def telegram_webhook(request: HttpRequest, secret: str) -> JsonResponse:
             _handle_help_command(chat_id)
             return JsonResponse({"ok": True})
 
-        # Обычное сообщение — пробуем обработать как сообщение в чат задачи
         _handle_task_chat_message(message, chat_id, tg_user_id)
         return JsonResponse({"ok": True})
 
     except Exception:  # noqa: BLE001
         logger.exception("Error while handling Telegram webhook")
-        # Telegram важно получать 200/ok, иначе он отключит webhook
         return JsonResponse({"ok": True})

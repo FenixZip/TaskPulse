@@ -1,7 +1,7 @@
 """accounts/views.py"""
-from django.shortcuts import render
 
 from django.contrib.auth import get_user_model
+from django.shortcuts import render
 from rest_framework import generics, permissions
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
@@ -62,6 +62,7 @@ class LoginView(generics.GenericAPIView):
         - валидирует данные
         - возвращает токен в ответе
         """
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
@@ -78,24 +79,14 @@ class LoginView(generics.GenericAPIView):
 
 
 class PasswordResetConfirmView(generics.CreateAPIView):
-    """
-    POST /api/auth/password-reset-confirm/
-    {
-      "reset_token": "<uidb64:token>",
-      "new_password": "...",
-      "new_password_confirm": "..."
-    }
-    """
+    """Сброс"""
 
     serializer_class = PasswordResetConfirmSerializer
     permission_classes = [permissions.AllowAny]
 
 
 class ProfileView(generics.RetrieveUpdateAPIView):
-    """
-    GET /api/auth/profile/  — получить данные профиля
-    PUT/PATCH /api/auth/profile/ — обновить (аватар, ФИО, компания, должность, email)
-    """
+    """Профиль"""
 
     serializer_class = ProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -105,25 +96,14 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
 
 class PasswordResetRequestView(generics.CreateAPIView):
-    """
-    POST /api/auth/password-reset/
-    {
-      "email": "user@example.com"
-    }
-    """
+    """Сброс пароля"""
 
     serializer_class = PasswordResetRequestSerializer
     permission_classes = [permissions.AllowAny]
 
 
 class ChangePasswordView(APIView):
-    """
-    POST /api/auth/change-password/
-    {
-    "current_password": "...",
-    "new_password": "..."
-    }
-    """
+    """Изменить пароль"""
 
     permission_classes = [permissions.IsAuthenticated]
 
@@ -138,22 +118,14 @@ class ChangePasswordView(APIView):
 
 
 class InvitationCreateView(generics.CreateAPIView):
-    """
-    POST /api/auth/invitations
-    Создаёт инвайт для email. Письмо уйдёт сигналом.
-    Доступно только CREATOR.
-    """
+    """Создать приглашение"""
 
     serializer_class = InvitationCreateSerializer
     permission_classes = [permissions.IsAuthenticated, IsCreator]
 
 
 class AcceptInviteView(generics.CreateAPIView):
-    """
-    POST /api/auth/accept-invite
-    Принимает token инвайта, пароль и, опционально, имя.
-    Создаёт/обновляет пользователя EXECUTOR и возвращает токен.
-    """
+    """Принять приглашение"""
 
     serializer_class = AcceptInviteSerializer
     permission_classes = [permissions.AllowAny]
@@ -162,25 +134,16 @@ class AcceptInviteView(generics.CreateAPIView):
 @api_view(["GET"])
 @permission_classes([permissions.AllowAny])
 def verify_email(request):
-    """
-    GET /api/auth/verify-email?token=UUID
+    """Подтверждает email, если токен валиден."""
 
-    Подтверждает email, если токен валиден.
-
-    Если явно просят JSON (?format=json) — вернём {"email_verified": true}.
-    Если человек переходит по ссылке из письма в браузере —
-    покажем красивую HTML-страницу.
-    """
     ser = VerifyEmailSerializer(data={"token": request.query_params.get("token")})
     ser.is_valid(raise_exception=True)
-    result = ser.save()   # {"email_verified": True/False}
+    result = ser.save()  # {"email_verified": True/False}
 
-    # Явный запрос JSON (например, из фронта: /verify-email/?token=...&format=json)
     fmt = request.query_params.get("format")
     if fmt in {"json", "api"}:
         return Response(result)
 
-    # Обычный переход по ссылке из письма — показываем страницу
     context = {
         "email_verified": bool(result.get("email_verified")),
     }
@@ -188,17 +151,13 @@ def verify_email(request):
 
 
 class ExecutorListView(generics.ListAPIView):
-    """
-    GET /api/auth/executors/
-    Возвращает всех исполнителей, принадлежащих текущему Создателю.
-    """
+    """Возвращает всех исполнителей, принадлежащих текущему Создателю."""
 
     serializer_class = ExecutorSerializer
     permission_classes = [permissions.IsAuthenticated, IsCreator]
 
     def get_queryset(self):
         user = self.request.user  # это Создатель
-        # Простой критерий: все EXECUTORы из той же компании, что и создатель
         return User.objects.filter(
             role=User.Role.EXECUTOR,
             company=user.company,
@@ -206,10 +165,7 @@ class ExecutorListView(generics.ListAPIView):
 
 
 class ResendVerificationView(generics.CreateAPIView):
-    """
-    POST /api/auth/resend-verification
-    Принимает email, повторно отправляет письмо подтверждения.
-    """
+    """Принимает email, повторно отправляет письмо подтверждения."""
 
     serializer_class = ResendVerificationSerializer
     permission_classes = [permissions.AllowAny]

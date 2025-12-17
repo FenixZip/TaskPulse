@@ -16,17 +16,12 @@ from .views import (
 app_name = "accounts"
 
 urlpatterns = [
-    # POST /api/auth/register/
     path("register/", RegisterView.as_view(), name="auth-register"),
-    # POST /api/auth/login/
     path("login/", LoginView.as_view(), name="auth-login"),
     path("password-reset/", PasswordResetRequestView.as_view(), name="auth-password-reset"),
     path("password-reset-confirm/", PasswordResetConfirmView.as_view(), name="auth-password-reset-confirm"),
-    # POST /api/auth/invitations/
     path("invitations/", InvitationCreateView.as_view(), name="invitation-create"),
-    # POST /api/auth/accept-invite/
     path("accept-invite/", AcceptInviteView.as_view(), name="auth-accept-invite"),
-    # GET /api/auth/verify-email/?token=...
     path("verify-email/", verify_email, name="auth-verify-email"),
     path(
         "resend-verification/",
@@ -36,7 +31,6 @@ urlpatterns = [
 
     path("executors/", ExecutorListView.as_view(), name="executor-list"),
 
-    # Личный кабинет
     path("profile/", ProfileView.as_view(), name="auth-profile"),
     path("change-password/", ChangePasswordView.as_view(), name="auth-change-password"),
 ]

@@ -1,4 +1,5 @@
 """tasks/serializers_cabinet.py"""
+
 from rest_framework import serializers
 
 from .models import Task, TaskAttachment, TaskActionLog

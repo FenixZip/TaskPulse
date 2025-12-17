@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('tasks', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
@@ -17,17 +16,24 @@ class Migration(migrations.Migration):
             name='TaskActionLog',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('action', models.CharField(choices=[('confirm_on_time', 'Подтверждение выполнения в срок'), ('extend_due_1d', 'Продление дедлайна на 1 день'), ('comment', 'Комментарий'), ('other', 'Другое действие')], max_length=50)),
+                ('action', models.CharField(choices=[('confirm_on_time', 'Подтверждение выполнения в срок'),
+                                                     ('extend_due_1d', 'Продление дедлайна на 1 день'),
+                                                     ('comment', 'Комментарий'), ('other', 'Другое действие')],
+                                            max_length=50)),
                 ('comment', models.TextField(blank=True)),
                 ('old_due_at', models.DateTimeField(blank=True, null=True)),
                 ('new_due_at', models.DateTimeField(blank=True, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('task', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='actions', to='tasks.task')),
-                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='task_actions', to=settings.AUTH_USER_MODEL)),
+                ('task', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='actions',
+                                           to='tasks.task')),
+                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL,
+                                           related_name='task_actions', to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'ordering': ('-created_at',),
-                'indexes': [models.Index(fields=['task', 'created_at'], name='idx_task_actionlog_task_time'), models.Index(fields=['user', 'created_at'], name='idx_task_actionlog_user_time'), models.Index(fields=['action'], name='idx_task_actionlog_action')],
+                'indexes': [models.Index(fields=['task', 'created_at'], name='idx_task_actionlog_task_time'),
+                            models.Index(fields=['user', 'created_at'], name='idx_task_actionlog_user_time'),
+                            models.Index(fields=['action'], name='idx_task_actionlog_action')],
             },
         ),
     ]

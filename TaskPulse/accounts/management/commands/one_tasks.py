@@ -51,7 +51,6 @@ class Command(BaseCommand):
         except User.DoesNotExist:
             raise CommandError(f"Создатель (creator) с email={self.CREATOR_EMAIL} не найден")
 
-        # отключаем email-сигналы на время сидирования (если есть)
         try:
             from accounts.signals import send_email_verification
             post_save.disconnect(send_email_verification, sender=User)
@@ -61,14 +60,11 @@ class Command(BaseCommand):
             signals_were_touched = False
 
         try:
-            # --- УДАЛЯЕМ ВСЕ ЗАДАЧИ ---
             deleted_count, _ = Task.objects.all().delete()
 
-            # --- при необходимости пересоздаём демо-пользователя ---
             if reset_user:
                 User.objects.filter(email=self.DEMO_USER_EMAIL).delete()
 
-            # --- создаём/получаем демо-пользователя ---
             demo_user, user_created = User.objects.get_or_create(
                 email=self.DEMO_USER_EMAIL,
                 defaults={
@@ -86,7 +82,6 @@ class Command(BaseCommand):
 
             self.attach_telegram(demo_user, self.TELEGRAM_ID)
 
-            # --- создаём ровно 1 задачу ---
             now = timezone.now()
             task = Task.objects.create(
                 creator=creator,

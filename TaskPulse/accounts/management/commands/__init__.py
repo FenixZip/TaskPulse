@@ -1,7 +1,7 @@
 from datetime import timedelta
 
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from tasks.models import Task
@@ -73,12 +73,12 @@ class Command(BaseCommand):
                 status = statuses[(idx + j) % len(statuses)]
 
                 task = Task.objects.create(
-                    title=f"Задача {idx}-{j+1} для {executor.full_name}",
-                    description=f"Описание задачи {idx}-{j+1}",
-                    creator=creator,          # поле создателя: подгони под свой Task
-                    assignee=executor,        # исполнитель
-                    priority=priority,        # "HIGH"/"MEDIUM"/"LOW"
-                    status=status,            # "NEW"/"IN_PROGRESS"/"DONE"
+                    title=f"Задача {idx}-{j + 1} для {executor.full_name}",
+                    description=f"Описание задачи {idx}-{j + 1}",
+                    creator=creator,  # поле создателя: подгони под свой Task
+                    assignee=executor,  # исполнитель
+                    priority=priority,  # "HIGH"/"MEDIUM"/"LOW"
+                    status=status,  # "NEW"/"IN_PROGRESS"/"DONE"
                     due_at=now + timedelta(days=idx + j),
                 )
                 self.stdout.write(self.style.SUCCESS(

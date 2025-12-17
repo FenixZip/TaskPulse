@@ -1,4 +1,4 @@
-"""TaskPulse/integrations/views_api.py"""
+"""integrations/views_api.py"""
 
 from django.conf import settings
 from rest_framework import status
@@ -12,13 +12,8 @@ from .models import TelegramProfile, TelegramLinkToken
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def telegram_profile(request):
-    """
-    GET /api/integrations/telegram/profile/
+    """Возвращает профиль Telegram текущего пользователя."""
 
-    Возвращает профиль Telegram текущего пользователя.
-    - 200 + объект TelegramProfile, если привязка есть
-    - 404, если Telegram ещё не привязан
-    """
     try:
         profile = TelegramProfile.objects.get(user=request.user)
     except TelegramProfile.DoesNotExist:
@@ -37,13 +32,8 @@ def telegram_profile(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def telegram_link_start(request):
-    """
-    POST /api/integrations/telegram/link-start/
+    """Создаёт TelegramLinkToken для текущего пользователя и"""
 
-    Создаёт TelegramLinkToken для текущего пользователя и
-    возвращает ссылку на бота вида
-    https://t.me/<bot>?start=<token>
-    """
     link = TelegramLinkToken.objects.create(user=request.user)
 
     bot_name = getattr(settings, "TELEGRAM_BOT_NAME", "").strip()
@@ -56,4 +46,3 @@ def telegram_link_start(request):
     # return Response({"link": deep_link})
     # PROD вернуть
     return Response({"link": deep_link}, status=status.HTTP_200_OK)
-

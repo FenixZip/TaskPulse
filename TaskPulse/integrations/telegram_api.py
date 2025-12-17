@@ -17,25 +17,12 @@ from .models import TelegramLinkToken
 
 
 def telegram_connect_start(request: HttpRequest) -> HttpResponse:
-    """
-    GET /api/integrations/telegram/connect/?token=<auth_token>
-
-    1. По DRF-токену находим пользователя.
-    2. Создаём одноразовый TelegramLinkToken, связанный с этим пользователем.
-    3. Строим deep-link:
-         https://t.me/<TELEGRAM_BOT_NAME>?start=<link_token>
-    4. Делаем redirect на этот deep-link.
-
-    НИКАКИХ операций с TelegramProfile здесь нет —
-    профиль создаётся/обновляется уже в webhook-е,
-    когда Telegram присылает update с этим start-token.
-    """
+    """Подключение к Телеграм"""
 
     raw_token = request.GET.get("token")
     if not raw_token:
         return HttpResponseBadRequest("Missing token")
 
-    # находим пользователя по DRF-токену
     try:
         token_obj = Token.objects.get(key=raw_token)
     except Token.DoesNotExist:
@@ -44,7 +31,6 @@ def telegram_connect_start(request: HttpRequest) -> HttpResponse:
     user = token_obj.user
 
     try:
-        # создаём новый link token для этого пользователя
         link = TelegramLinkToken.objects.create(user=user)
     except Exception as exc:  # на всякий случай, чтобы не ронять сервер
         return JsonResponse(
@@ -61,5 +47,4 @@ def telegram_connect_start(request: HttpRequest) -> HttpResponse:
 
     deep_link = f"https://t.me/{bot_name}?start={link.token}"
 
-    # обычный HTTP-редирект в Telegram
     return HttpResponseRedirect(deep_link)

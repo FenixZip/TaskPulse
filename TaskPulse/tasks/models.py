@@ -288,21 +288,16 @@ class TaskActionLog(models.Model):
         """
 
         CONFIRM_ON_TIME = "confirm_on_time", "Подтверждение выполнения в срок"
-        # действие: дедлайн задачи продлён на 1 день
         EXTEND_DUE_1D = "extend_due_1d", "Продление дедлайна на 1 день"
-        # действие: произвольный комментарий по задаче
         COMMENT = "comment", "Комментарий"
-        # действие: любое другое действие, если не подошло ни одно из вышеперечисленных
         OTHER = "other", "Другое действие"
 
-    # ссылка на задачу, к которой относится действие
     task = models.ForeignKey(
         Task,
         on_delete=models.CASCADE,
         related_name="actions",
     )
 
-    # пользователь, который совершил действие (может быть NULL для системных действий)
     user = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -311,30 +306,25 @@ class TaskActionLog(models.Model):
         related_name="task_actions",
     )
 
-    # тип действия (одно из значений перечисления Action выше)
     action = models.CharField(
         max_length=50,
         choices=Action.choices,
     )
 
-    # текстовый комментарий к действию
     comment = models.TextField(
         blank=True,
     )
 
-    # предыдущий дедлайн задачи (если действие связано с переносом срока)
     old_due_at = models.DateTimeField(
         null=True,
         blank=True,
     )
 
-    # новый дедлайн задачи (после действия)
     new_due_at = models.DateTimeField(
         null=True,
         blank=True,
     )
 
-    # когда действие было совершено (автоматически заполняется текущим временем)
     created_at = models.DateTimeField(
         auto_now_add=True,
     )
@@ -358,7 +348,6 @@ class TaskActionLog(models.Model):
     ) -> "TaskActionLog":
         """Удобный класс-метод для записи действия в журнал."""
 
-        # создаём и сразу сохраняем объект в базе через менеджер objects.create(...)
         return cls.objects.create(
             task=task,
             user=user,
@@ -371,19 +360,14 @@ class TaskActionLog(models.Model):
     class Meta:
         """Метаданные модели журнала действий."""
 
-        # по умолчанию сортируем по дате создания, от новых к старым
         ordering = ("-created_at",)
-        # добавляем индексы для ускорения запросов по задаче, дате и типу действия
         indexes = [
-            # индекс по задаче и времени — удобно для выборки всех действий по задаче
             models.Index(
                 fields=["task", "created_at"], name="idx_task_actionlog_task_time"
             ),
-            # индекс по пользователю и дате — удобно для отчётов по активности пользователя
             models.Index(
                 fields=["user", "created_at"], name="idx_task_actionlog_user_time"
             ),
-            # индекс по типу действия — удобно для агрегирования по action
             models.Index(fields=["action"], name="idx_task_actionlog_action"),
         ]
 

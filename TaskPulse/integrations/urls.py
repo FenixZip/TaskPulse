@@ -10,7 +10,6 @@ app_name = "integrations"
 
 router = DefaultRouter()
 
-# /api/integrations/telegram/profile/
 router.register(
     r"integrations/telegram/profile",
     TelegramProfileViewSet,
@@ -19,20 +18,15 @@ router.register(
 
 urlpatterns = []
 
-# DRF-маршруты (профиль Telegram текущего пользователя)
 urlpatterns += router.urls
 
-# Обычные Django URL'ы
 urlpatterns += [
-    # deep-link для старта привязки Telegram
-    # ИТОГОВЫЙ ПУТЬ: /api/integrations/telegram/link-start/
     path(
         "integrations/telegram/link-start/",
         TelegramLinkStartView.as_view(),
         name="telegram-link-start",
     ),
-    # вебхук Telegram (BotFather настраиваем сюда)
-    # ИТОГОВЫЙ ПУТЬ: /api/telegram/webhook/
+
     path(
         "telegram/webhook/",
         TelegramWebhookView.as_view(),

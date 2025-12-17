@@ -1,121 +1,119 @@
-
 {% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Подтверждение email — TaskPulse</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #0b1120 0, #020617 45%, #020617 100%);
-      color: #e5e7eb;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+    <meta charset="UTF-8">
+    <title>Подтверждение email — TaskPulse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: radial-gradient(circle at top, #0b1120 0, #020617 45%, #020617 100%);
+            color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    .card {
-      width: 100%;
-      max-width: 420px;
-      border-radius: 24px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      background: radial-gradient(circle at top left, #0f172a, #020617);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-      padding: 24px 24px 20px;
-      text-align: center;
-    }
+        .card {
+            width: 100%;
+            max-width: 420px;
+            border-radius: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            background: radial-gradient(circle at top left, #0f172a, #020617);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            padding: 24px 24px 20px;
+            text-align: center;
+        }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 14px;
-      font-weight: 600;
-      font-size: 20px;
-    }
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            font-weight: 600;
+            font-size: 20px;
+        }
 
-    .logo img {
-      width: 32px;
-      height: 32px;
-      object-fit: contain;
-    }
+        .logo img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
 
-    .title {
-      font-size: 22px;
-      font-weight: 600;
-      margin-bottom: 10px;
-    }
+        .title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
 
-    .title span {
-      color: #bef264; /* акцентный цвет */
-    }
+        .title span {
+            color: #bef264; /* акцентный цвет */
+        }
 
-    .text {
-      font-size: 14px;
-      color: #9ca3af;
-      margin-bottom: 20px;
-      line-height: 1.5;
-    }
+        .text {
+            font-size: 14px;
+            color: #9ca3af;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
 
-    .button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 20px;
-      border-radius: 999px;
-      border: none;
-      background-color: #bef264;
-      color: #020617;
-      font-size: 14px;
-      font-weight: 500;
-      text-decoration: none;
-      cursor: pointer;
-    }
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border-radius: 999px;
+            border: none;
+            background-color: #bef264;
+            color: #020617;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+        }
 
-    .button:hover {
-      background-color: #a3e635;
-    }
+        .button:hover {
+            background-color: #a3e635;
+        }
 
-    .footer {
-      margin-top: 14px;
-      font-size: 12px;
-      color: #6b7280;
-    }
-  </style>
+        .footer {
+            margin-top: 14px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+    </style>
 </head>
 <body>
-  <div class="card">
+<div class="card">
     <div class="logo">
-      <!-- можно заменить src на свой статика-логотип -->
-      <img src="{% static 'email/landing-monitor.png' %}" alt="Pulse-zone.tech">
-      <span>Pulse-zone.tech</span>
+        <img src="{% static 'email/landing-monitor.png' %}" alt="Pulse-zone.tech">
+        <span>Pulse-zone.tech</span>
     </div>
 
     {% if email_verified %}
-      <div class="title"><span>Email</span> подтверждён</div>
-      <p class="text">
-        Спасибо! Ваша почта успешно подтверждена.
-        Теперь вы можете войти в личный кабинет.
-      </p>
+        <div class="title"><span>Email</span> подтверждён</div>
+        <p class="text">
+            Спасибо! Ваша почта успешно подтверждена.
+            Теперь вы можете войти в личный кабинет.
+        </p>
     {% else %}
-      <div class="title">Ссылка недействительна</div>
-      <p class="text">
-        Похоже, ссылка подтверждения устарела или уже была использована.
-        Попробуйте запросить новое письмо на сайте.
-      </p>
+        <div class="title">Ссылка недействительна</div>
+        <p class="text">
+            Похоже, ссылка подтверждения устарела или уже была использована.
+            Попробуйте запросить новое письмо на сайте.
+        </p>
     {% endif %}
 
     <a href="/auth/login" class="button">Перейти к входу</a>
 
     <div class="footer">
-      © {% now "Y" %} Pulse-zone.tech
+        © {% now "Y" %} Pulse-zone.tech
     </div>
-  </div>
+</div>
 </body>
 </html>

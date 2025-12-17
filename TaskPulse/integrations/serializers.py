@@ -1,15 +1,12 @@
 """integrations/serializers.py"""
 
-from integrations.models import TelegramProfile
 from rest_framework import serializers
+
+from integrations.models import TelegramProfile
 
 
 class TelegramProfileSerializer(serializers.ModelSerializer):
-    """
-    Простейший сериализатор профиля Telegram.
-    Используется, если нужно отдать на фронт информацию о том,
-    привязан ли у текущего пользователя телеграм.
-    """
+    """Cериализатор профиля Telegram."""
 
     class Meta:
         model = TelegramProfile

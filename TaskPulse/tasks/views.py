@@ -2,6 +2,8 @@
 
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
@@ -9,8 +11,6 @@ from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db.models import Q
-from django.contrib.auth import get_user_model
 
 from .filters import TaskFilter
 from .models import Task, TaskChangeLog, TaskMessage
@@ -27,16 +27,7 @@ User = get_user_model()
 
 
 class TaskViewSet(viewsets.ModelViewSet):
-    """
-    Полноценный вьюсет для задач:
-    - GET /api/tasks/                    — список с фильтрами/поиском
-    - POST /api/tasks/                   — создать (creator = request.user)
-    - GET /api/tasks/{id}/               — детально
-    - PATCH /api/tasks/{id}/             — частичное изменение
-    - POST /api/tasks/{id}/attachments/  — загрузить файл к задаче
-    - POST /api/tasks/{id}/confirm-on-time — действие “сделаю вовремя”
-    - POST /api/tasks/{id}/extend-1d     — действие “продлить на сутки”
-    """
+    """Полноценный вьюсет для задач:"""
 
     queryset = Task.objects.select_related("creator", "assignee").prefetch_related(
         "attachments"
@@ -59,16 +50,15 @@ class TaskViewSet(viewsets.ModelViewSet):
         return qs
 
     def get_serializer_class(self):
-        """
-        Возвращает сериализатор в зависимости от действия
-        (list/retrieve vs create/update).
-        """
+        """Возвращает сериализатор в зависимости от действия"""
+
         if self.action in ("create", "update", "partial_update"):
             return TaskUpsertSerializer
         return TaskSerializer
 
     def get_permissions(self):
         """Настраиваем права доступа."""
+
         if self.action in ("list", "create"):
             return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated(), IsCreatorOrAssignee()]
@@ -78,6 +68,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         Создаёт задачу через upsert-сериализатор,
         а отдаёт read-сериализатор (с полем creator и вложениями).
         """
+
         upsert = TaskUpsertSerializer(data=request.data, context={"request": request})
         upsert.is_valid(raise_exception=True)
         task = upsert.save()
@@ -96,7 +87,6 @@ class TaskViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="confirm-on-time")
     def confirm_on_time(self, request, pk=None):
         """
-        POST /api/tasks/{id}/confirm-on-time
         Исполнитель подтверждает, что уложится в срок.
         Запишем событие в журнал.
         """
@@ -125,10 +115,8 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="extend-1d")
     def extend_1d(self, request, pk=None):
-        """
-        POST /api/tasks/{id}/extend-1d
-        Продлевает дедлайн задачи на сутки. Комментарий обязателен.
-        """
+        """Продлевает дедлайн задачи на сутки. Комментарий обязателен."""
+
         task = self.get_object()
         if task.assignee_id != request.user.id:
             return Response(
@@ -164,15 +152,6 @@ class ConversationMessagesView(APIView):
     """
     Общий диалог между текущим пользователем и другим пользователем (создатель ↔ исполнитель)
     по всем задачам сразу.
-
-    GET  /api/tasks/conversation-messages/?user_id=<id>
-      -> всегда 200 и список сообщений (может быть пустой список)
-
-    POST /api/tasks/conversation-messages/
-      data:
-        - user_id: id собеседника (обязательное)
-        - task: id задачи (опционально, если одна общая задача — можно не передавать)
-        - text / file: обычные поля TaskMessageSerializer
     """
 
     permission_classes = [permissions.IsAuthenticated]
@@ -181,8 +160,6 @@ class ConversationMessagesView(APIView):
         user = request.user
         other_id = request.query_params.get("user_id")
 
-        # Если user_id не указан — просто возвращаем пустой список,
-        # чтобы фронт не видел 404/400.
         if not other_id:
             serializer = TaskMessageSerializer(
                 TaskMessage.objects.none(),
@@ -204,7 +181,6 @@ class ConversationMessagesView(APIView):
         try:
             other = User.objects.get(pk=other_id_int)
         except User.DoesNotExist:
-            # Вместо 404 возвращаем пустой список
             serializer = TaskMessageSerializer(
                 TaskMessage.objects.none(),
                 many=True,
@@ -253,7 +229,6 @@ class ConversationMessagesView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # ---- ищем задачу, к которой относится сообщение ----
         task: Task | None = None
 
         if task_id:
@@ -287,7 +262,6 @@ class ConversationMessagesView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
         else:
-            # Если task явно не указали — берём самую "свежую" общую задачу
             tasks_qs = Task.objects.filter(
                 Q(creator=user, assignee=other)
                 | Q(creator=other, assignee=user)
@@ -300,7 +274,6 @@ class ConversationMessagesView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # проверяем, что оба участника действительно связаны этой задачей
         if not (
                 (task.creator_id == user.id and task.assignee_id == other.id)
                 or (task.creator_id == other.id and task.assignee_id == user.id)
@@ -310,7 +283,6 @@ class ConversationMessagesView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-            # создаём сообщение
         serializer = TaskMessageSerializer(
             data=request.data,
             context={"request": request},

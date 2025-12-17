@@ -1,23 +1,16 @@
 """tasks/services/kpi.py"""
 """Сервисные функции для расчёта KPI по задачам."""
+
 from typing import Dict, Any, List
 
 from django.db.models import F, Q
 
-from tasks.models import Task
 from accounts.models import User
+from tasks.models import Task
 
 
 def calc_user_month_kpi(user: User, year: int, month: int) -> Dict[str, Any]:
-    """
-    Считает KPI по задачам пользователя за указанный месяц.
-    Метрики:
-    - total            — всего задач с due_at в этом месяце;
-    - done             — сколько из них выполнено (status=DONE);
-    - done_on_time     — выполнено в срок (updated_at <= due_at или due_at is null);
-    - done_late        — выполнено, но позже срока;
-    - by_priority[]    — те же показатели по каждому priority.
-    """
+    """Считает KPI по задачам пользователя за указанный месяц."""
 
     # Берём задачи, у которых due_at попадает в нужный месяц
     base_qs = Task.objects.filter(

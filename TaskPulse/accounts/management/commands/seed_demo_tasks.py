@@ -3,10 +3,10 @@
 import random
 from datetime import timedelta
 
-from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
-from django.utils import timezone
+from django.core.management.base import BaseCommand, CommandError
 from django.db.models.signals import post_save
+from django.utils import timezone
 
 from tasks.models import Task
 
@@ -25,7 +25,6 @@ class Command(BaseCommand):
         parser.add_argument("--reset", action="store_true")
         parser.add_argument("--people", type=int, default=12)
 
-    # ---------- Telegram ----------
     def attach_telegram(self, user, telegram_id: int):
         """
         Безопасно создаёт TelegramProfile для пользователя
@@ -44,7 +43,6 @@ class Command(BaseCommand):
 
         profile.save()
 
-    # ---------- Main ----------
     def handle(self, *args, **options):
         people = options["people"]
         reset = options["reset"]
@@ -65,7 +63,6 @@ class Command(BaseCommand):
                 title__startswith=self.DEMO_PREFIX
             ).delete()
 
-        # отключаем email-сигналы
         from accounts.signals import send_email_verification
         post_save.disconnect(send_email_verification, sender=User)
 
@@ -108,7 +105,6 @@ class Command(BaseCommand):
                     user.set_password(self.DEMO_PASSWORD)
                     user.save()
 
-                # Telegram ID — всегда есть
                 telegram_id = self.TELEGRAM_ID_START + i
                 self.attach_telegram(user, telegram_id)
 
@@ -117,7 +113,6 @@ class Command(BaseCommand):
         finally:
             post_save.connect(send_email_verification, sender=User)
 
-        # ---------- Tasks ----------
         now = timezone.now()
         statuses = [Task.Status.NEW, Task.Status.OVERDUE, Task.Status.DONE]
 

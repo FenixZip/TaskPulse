@@ -1,4 +1,5 @@
 """tasks/services/notifications.py"""
+
 from __future__ import annotations
 
 from typing import Optional, Iterable
@@ -13,6 +14,7 @@ def _get_profile_safe(user_id: int) -> Optional[TelegramProfile]:
     Возвращает TelegramProfile пользователя или None,
     если профиль не найден.
     """
+
     if not user_id:
         return None
 
@@ -41,7 +43,7 @@ def notify_task_assigned(task: Task) -> None:
     link = build_task_link(task.id)
 
     text_lines: list[str] = [
-        "🆕 <b>Новая задача</b>",
+        " <b>Новая задача</b>",
         "",
         f"<b>{task.title}</b>",
     ]
@@ -52,7 +54,7 @@ def notify_task_assigned(task: Task) -> None:
     text_lines.extend(
         [
             "",
-            f"⏰ Дедлайн: {task.due_at.strftime('%d.%m.%Y %H:%M') if task.due_at else 'не указан'}",
+            f" Дедлайн: {task.due_at.strftime('%d.%m.%Y %H:%M') if task.due_at else 'не указан'}",
             "",
             f"Открыть задачу: {link}",
         ]
@@ -64,11 +66,11 @@ def notify_task_assigned(task: Task) -> None:
         "inline_keyboard": [
             [
                 {
-                    "text": "⏰ Продлить на сутки",
+                    "text": " Продлить на сутки",
                     "callback_data": f"extend_1d:{task.id}",
                 },
                 {
-                    "text": "✅ Сделаю вовремя",
+                    "text": " Сделаю вовремя",
                     "callback_data": f"confirm_on_time:{task.id}",
                 },
             ]
@@ -78,13 +80,8 @@ def notify_task_assigned(task: Task) -> None:
     send_telegram_message(profile.chat_id, text, reply_markup=reply_markup)
 
 
-# === 2. Напоминание за 24 часа до дедлайна ===
-
-
 def notify_task_due_soon(task: Task) -> None:
-    """
-    Отправляет напоминание за ~24 часа до дедлайна.
-    """
+    """Отправляет напоминание за ~24 часа до дедлайна."""
 
     if task.assignee_id is None:
         return
@@ -96,7 +93,7 @@ def notify_task_due_soon(task: Task) -> None:
     link = build_task_link(task.id)
 
     text_lines: list[str] = [
-        "⏰ <b>Напоминание о задаче</b>",
+        " <b>Напоминание о задаче</b>",
         "",
         f"<b>{task.title}</b>",
     ]
@@ -116,11 +113,11 @@ def notify_task_due_soon(task: Task) -> None:
         "inline_keyboard": [
             [
                 {
-                    "text": "⏰ Продлить на сутки",
+                    "text": " Продлить на сутки",
                     "callback_data": f"extend_1d:{task.id}",
                 },
                 {
-                    "text": "✅ Сделаю вовремя",
+                    "text": " Сделаю вовремя",
                     "callback_data": f"confirm_on_time:{task.id}",
                 },
             ]
@@ -128,9 +125,6 @@ def notify_task_due_soon(task: Task) -> None:
     }
 
     send_telegram_message(profile.chat_id, text, reply_markup=reply_markup)
-
-
-# === 3. Задача выполнена (уведомление создателю) ===
 
 
 def notify_task_completed(task: Task) -> None:
@@ -157,7 +151,7 @@ def notify_task_completed(task: Task) -> None:
         )
 
     text_lines: list[str] = [
-        "✅ <b>Задача выполнена</b>",
+        " <b>Задача выполнена</b>",
         "",
         f"<b>{task.title}</b>",
     ]
@@ -175,14 +169,12 @@ def notify_task_completed(task: Task) -> None:
     send_telegram_message(profile.chat_id, text, reply_markup=None)
 
 
-# === 4. Новое сообщение в чате по задаче ===
-
-
 def _get_profiles_safe(user_ids: Iterable[int]) -> list[TelegramProfile]:
     """
     Возвращает список TelegramProfile для указанных пользователей.
     Удобно, когда нужно отправить нескольким сразу.
     """
+
     ids = [uid for uid in user_ids if uid]
     if not ids:
         return []
@@ -193,9 +185,6 @@ def notify_task_message(message: TaskMessage) -> None:
     """
     Уведомляет вторую сторону (создателя или исполнителя),
     что в чате по задаче пришло новое сообщение.
-
-    При желании можно включить дублирование уведомления отправителю
-    (см. комментарий внизу).
     """
 
     task = message.task
@@ -204,27 +193,20 @@ def notify_task_message(message: TaskMessage) -> None:
     creator_id = task.creator_id
     assignee_id = task.assignee_id
 
-    # --- определяем, кого уведомлять ---
     recipients: set[int] = set()
 
-    # если написал создатель → уведомляем исполнителя
     if sender.id == creator_id and assignee_id:
         recipients.add(assignee_id)
 
-    # если написал исполнитель → уведомляем создателя
     elif sender.id == assignee_id and creator_id:
         recipients.add(creator_id)
 
-    # если сообщение от кого-то ещё (теоретически) — не шлём
     if not recipients:
         return
 
-    # 👉 если хочешь, чтобы отправителю тоже приходила копия, раскомментируй:
-    # recipients.add(sender.id)
 
     profiles = _get_profiles_safe(recipients)
     if not profiles:
-        # никто из получателей не привязан к Telegram
         return
 
     link = build_task_link(task.id)
@@ -232,7 +214,6 @@ def notify_task_message(message: TaskMessage) -> None:
     full_name = (getattr(sender, "full_name", "") or "").strip()
     sender_name = full_name if full_name else sender.email
 
-    # обрезаем сообщение, чтобы не слать огромный текст
     text_preview = (message.text or "").strip()
     if len(text_preview) > 300:
         text_preview = text_preview[:297] + "..."
@@ -252,7 +233,6 @@ def notify_task_message(message: TaskMessage) -> None:
 
     text = "\n".join(text_lines)
 
-    # рассылаем всем получателям, у кого есть TelegramProfile
     for profile in profiles:
         send_telegram_message(profile.chat_id, text, reply_markup=None)
 
@@ -262,6 +242,7 @@ def _get_profile_safe(user_id: int) -> Optional[TelegramProfile]:
     Возвращает TelegramProfile пользователя или None,
     если профиль не найден.
     """
+
     if not user_id:
         return None
 
@@ -276,6 +257,7 @@ def _get_profiles_safe(user_ids: Iterable[int]) -> list[TelegramProfile]:
     Возвращает список TelegramProfile для указанных пользователей.
     Полезно, когда хотим разослать нескольким.
     """
+
     ids = [uid for uid in user_ids if uid]
     if not ids:
         return []
@@ -286,9 +268,6 @@ def notify_task_message(message: TaskMessage) -> None:
     """
     Уведомляет вторую сторону (создателя или исполнителя),
     что в чате по задаче пришло новое сообщение.
-
-    При желании можно включить отправку копии самому отправителю
-    (см. комментарий ниже).
     """
 
     task = message.task
@@ -297,23 +276,17 @@ def notify_task_message(message: TaskMessage) -> None:
     creator_id = task.creator_id
     assignee_id = task.assignee_id
 
-    # --- определяем получателей ---
     recipients: set[int] = set()
 
-    # если написал создатель → уведомляем исполнителя
     if sender.id == creator_id and assignee_id:
         recipients.add(assignee_id)
 
-    # если написал исполнитель → уведомляем создателя
     elif sender.id == assignee_id and creator_id:
         recipients.add(creator_id)
 
-    # если сообщение не от создателя и не от исполнителя — никого не трогаем
     if not recipients:
         return
 
-    # 👉 если хочешь, чтобы отправителю тоже приходила копия — раскомментируй:
-    # recipients.add(sender.id)
 
     profiles = _get_profiles_safe(recipients)
     if not profiles:
@@ -323,12 +296,11 @@ def notify_task_message(message: TaskMessage) -> None:
     link = build_task_link(task.id)
 
     sender_name = (
-        getattr(sender, "full_name", "")
-        or sender.get_full_name()
-        or sender.email
+            getattr(sender, "full_name", "")
+            or sender.get_full_name()
+            or sender.email
     )
 
-    # аккуратно обрезаем текст
     text_preview = (message.text or "").strip()
     if len(text_preview) > 300:
         text_preview = text_preview[:297] + "..."

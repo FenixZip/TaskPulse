@@ -169,6 +169,7 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def get_result_file(self, obj: Task) -> Optional[str]:
         return obj.last_result_file_url()
+
     def validate(self, attrs):
         assignee = attrs.get("assignee") or getattr(self.instance, "assignee", None)
 

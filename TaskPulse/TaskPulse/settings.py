@@ -11,8 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
 
 from celery.schedules import crontab
 from dotenv import load_dotenv
@@ -46,11 +46,9 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY and not DEBUG:
     raise RuntimeError("SECRET_KEY не установлен")
 
-
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
 TELEGRAM_BOT_NAME = os.getenv("TELEGRAM_BOT_NAME", "pulse_zone_tech_bot")
-
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.mail.ru")
@@ -66,7 +64,6 @@ DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
     f"TaskPulse <{EMAIL_HOST_USER}>"
 )
-
 
 # Application definition
 
@@ -86,7 +83,6 @@ INSTALLED_APPS = [
     "integrations",
     "tasks.apps.TasksConfig",
 ]
-
 
 AUTH_USER_MODEL = "accounts.User"
 
@@ -110,17 +106,12 @@ CORS_ALLOWED_ORIGINS = [
     "https://pulse-zone.tech",
 ]
 
-
-# === Celery ===
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 
-# В тестах / локально можно выполнять задачи синхронно,
-# чтобы не поднимать воркер Celery
 CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", "False").lower() in ("1", "true", "yes")
 CELERY_TASK_EAGER_PROPAGATES = os.getenv("CELERY_TASK_EAGER_PROPAGATES", "False").lower() in ("1", "true", "yes")
 
-# Периодическая задача напоминаний (раз в 15 минут)
 CELERY_BEAT_SCHEDULE = {
     "tasks.send_due_soon_reminders": {
         "task": "tasks.tasks_reminders.send_due_soon_reminders",
@@ -128,8 +119,6 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-
-# На время разработки письма будем выводить в консоль
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -141,12 +130,12 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# базовый URL фронтенда (по умолчанию dev)
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000")
 
 
 def _split_env_list(name, default=""):
     """Разбить переменную окружения на список, отбросив пустые значения."""
+
     value = os.getenv(name, default)
     return [item.strip() for item in value.split(",") if item.strip()]
 

@@ -42,15 +42,9 @@ def send_verification_email(user, token):
 
 
 def send_invite_email(invitation, invite_token: str):
-    """
-    Письмо-приглашение в рабочее пространство.
-    Параметры:
-      invitation  – объект приглашения (должен иметь поля email, full_name, workspace/company и т.п.)
-      invite_token – токен/uuid приглашения, который фронт потом использует.
-    """
+    """Письмо-приглашение в рабочее пространство."""
 
     base = getattr(settings, "FRONTEND_BASE_URL", "").rstrip("/")
-    # путь можно поменять под твой фронт
     invite_link = f"{base}/invite/accept?token={invite_token}"
 
     context = {
@@ -71,13 +65,9 @@ def send_invite_email(invitation, invite_token: str):
 
 
 def send_password_reset_email(user, reset_token: str):
-    """
-    Письмо для сброса пароля.
-    reset_token – токен, который фронт потом отправит на эндпоинт смены пароля.
-    """
+    """Письмо для сброса пароля."""
 
     base = getattr(settings, "FRONTEND_BASE_URL", "").rstrip("/")
-    # путь тоже можешь адаптировать под фронт
     reset_link = f"{base}/reset-password?token={reset_token}"
 
     context = {

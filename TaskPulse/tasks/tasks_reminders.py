@@ -1,4 +1,5 @@
 """tasks/tasks_reminders.py"""
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -21,6 +22,7 @@ def send_task_assigned_notification(task_id: int) -> None:
     Асинхронно отправляет уведомление исполнителю
     о назначении новой задачи.
     """
+
     try:
         task = Task.objects.get(pk=task_id)
     except Task.DoesNotExist:
@@ -35,6 +37,7 @@ def send_task_completed_notification(task_id: int) -> None:
     Асинхронно отправляет уведомление создателю,
     что задача выполнена.
     """
+
     try:
         task = Task.objects.get(pk=task_id)
     except Task.DoesNotExist:
@@ -49,6 +52,7 @@ def send_new_task_message_notification(message_id: int) -> None:
     Асинхронно уведомляет вторую сторону диалога
     о новом сообщении по задаче.
     """
+
     try:
         msg = TaskMessage.objects.select_related("task", "sender").get(
             pk=message_id

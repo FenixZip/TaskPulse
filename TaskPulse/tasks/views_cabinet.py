@@ -1,4 +1,5 @@
 """tasks/views_cabinet.py"""
+
 from typing import Any, Dict, List
 
 from django.db.models import Count, Q, F
@@ -30,13 +31,7 @@ class CreatorOnlyMixin:
 
 
 class CreatorTasksView(CreatorOnlyMixin, ListAPIView):
-    """
-    Кабинет Создателя: список собственных задач.
-    Фильтры:
-    - status=...
-    - assignee=ID (или 'me' в будущем)
-    - ordering=due_at / -due_at / priority / -priority / status / -status / updated_at / -updated_at
-    """
+    """Кабинет Создателя: список собственных задач."""
 
     permission_classes = [IsAuthenticated]
     serializer_class = CreatorTaskListSerializer
@@ -84,13 +79,7 @@ class CreatorTasksView(CreatorOnlyMixin, ListAPIView):
 
 
 class CreatorStatsByAssigneeView(CreatorOnlyMixin, APIView):
-    """
-    Кабинет Создателя: сводка по сотрудникам.
-    GET /api/me/creator/stats-by-assignee/?month=YYYY-MM (опционально)
-    Возвращает по каждому исполнителю:
-    - assignee_id, assignee_email, assignee_name
-    - total / done / done_on_time / done_late
-    """
+    """Кабинет Создателя: сводка по сотрудникам."""
 
     permission_classes = [IsAuthenticated]
 
@@ -117,14 +106,12 @@ class CreatorStatsByAssigneeView(CreatorOnlyMixin, APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        # Базовая группировка по исполнителю
         base = (
             qs.values("assignee_id", "assignee__email", "assignee__full_name")
             .annotate(total=Count("id"))
             .order_by("assignee__full_name")
         )
 
-        # Для done_on_time / done_late сделаем отдельные queryset и соберём словари
         done_qs = qs.filter(status=Task.Status.DONE)
         done_on_time_qs = done_qs.filter(
             Q(due_at__isnull=True) | Q(updated_at__lte=F("due_at"))
@@ -165,12 +152,7 @@ class CreatorStatsByAssigneeView(CreatorOnlyMixin, APIView):
 
 
 class ExecutorTasksView(ListAPIView):
-    """
-    Кабинет Исполнителя: список назначенных задач.
-    Фильтры:
-    - status=...
-    - ordering=due_at / -due_at / priority / -priority / updated_at / -updated_at
-    """
+    """Кабинет Исполнителя: список назначенных задач."""
 
     permission_classes = [IsAuthenticated]
     serializer_class = ExecutorTaskListSerializer
@@ -200,12 +182,7 @@ class ExecutorTasksView(ListAPIView):
 
 
 class ExecutorTaskDetailView(RetrieveAPIView):
-    """
-    Детальная карточка задачи для Исполнителя:
-    - основная инфа
-    - вложения
-    - история действий (TaskActionLog)
-    """
+    """Детальная карточка задачи для Исполнителя:"""
 
     permission_classes = [IsAuthenticated]
     serializer_class = ExecutorTaskDetailSerializer

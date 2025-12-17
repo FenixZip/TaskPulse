@@ -12,7 +12,6 @@ from rest_framework.response import Response
 
 from .services.kpi import calc_user_month_kpi
 
-
 User = get_user_model()
 
 
@@ -37,6 +36,7 @@ class CSVRenderer(BaseRenderer):
 
 def _parse_month(month_str: str):
     """Разбирает строку YYYY-MM в (year, month_int) или возвращает (None, None) при ошибке."""
+
     if not month_str:
         return None, None
     try:
@@ -54,14 +54,7 @@ def _parse_month(month_str: str):
 @permission_classes([IsAuthenticated])
 @renderer_classes([JSONRenderer, BrowsableAPIRenderer, CSVRenderer])
 def monthly_report(request):
-    """
-    Отчёт по задачам исполнителя за месяц.
-
-    Параметры:
-    - ?user=me (по умолчанию) или ?user=<id>;
-    - ?month=YYYY-MM (обязателен);
-    - ?format=json (по умолчанию) или ?format=csv.
-    """
+    """Отчёт по задачам исполнителя за месяц."""
 
     current_user = request.user
     if getattr(current_user, "role", None) != "CREATOR":
@@ -98,7 +91,6 @@ def monthly_report(request):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-    # --- KPI считаем через сервисный слой ---
     data = calc_user_month_kpi(target_user, year, month)
 
     if fmt == "csv":

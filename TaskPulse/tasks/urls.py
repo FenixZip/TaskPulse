@@ -1,3 +1,5 @@
+"""tasks/urls.py"""
+
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
@@ -14,16 +16,12 @@ router = DefaultRouter()
 router.register("", TaskViewSet, basename="task")
 
 urlpatterns = [
-    # --- Чат создатель ↔ исполнитель ---
-    #   GET  /api/tasks/conversation-messages/?user_id=<id>
-    #   POST /api/tasks/conversation-messages/
     path(
         "conversation-messages/",
         ConversationMessagesView.as_view(),
         name="task-conversation-messages",
     ),
 
-    # --- Кабинет создателя ---
     path(
         "cabinet/creator/tasks/",
         CreatorTasksView.as_view(),
@@ -35,7 +33,6 @@ urlpatterns = [
         name="creator-stats-by-assignee",
     ),
 
-    # --- Кабинет исполнителя ---
     path(
         "cabinet/executor/tasks/",
         ExecutorTasksView.as_view(),
@@ -47,13 +44,11 @@ urlpatterns = [
         name="executor-task-detail",
     ),
 
-    # --- Отчёт по задачам за месяц ---
     path(
         "reports/monthly/",
         monthly_report,
         name="reports-monthly",
     ),
 
-    # все CRUD-роуты для задач от вьюсета (должен быть В КОНЦЕ)
     path("", include(router.urls)),
 ]
