@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: taskpulse-web
-    working_dir: /app/TaskPulse
+    working_dir: /app
     command: >
       sh -c "
         python manage.py migrate &&
@@ -16,8 +16,8 @@ services:
     env_file:
       - .env.prod
     volumes:
-      - static_volume:/app/TaskPulse/staticfiles
-      - media_volume:/app/TaskPulse/media
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
     depends_on:
       - db
       - redis
@@ -47,7 +47,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: taskpulse-celery
-    working_dir: /app/TaskPulse
+    working_dir: /app
     command: celery -A TaskPulse.celery_app:celery_app worker -l info
     env_file:
       - .env.prod
@@ -60,7 +60,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: taskpulse-beat
-    working_dir: /app/TaskPulse
+    working_dir: /app
     command: celery -A TaskPulse.celery_app:celery_app beat -l info
     env_file:
       - .env.prod
