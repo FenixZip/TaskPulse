@@ -1,8 +1,10 @@
 // src/shared/config/env.ts
 
-
 export const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://pulse-zone.tech:8000";
+  import.meta.env.VITE_API_BASE_URL || "/api";
+
+// export const API_BASE_URL =
+//     import.meta.env.VITE_API_BASE_URL || "https://pulse-zone.tech:8000";
 
 
 // export const API_BASE_URL =
