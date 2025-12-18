@@ -198,36 +198,19 @@ def telegram_webhook(request: HttpRequest, secret: str) -> JsonResponse:
 
     try:
         body_raw = request.body.decode("utf-8")
-        update = json.loads(body_raw)
+        update: Dict[str, Any] = json.loads(body_raw)
     except Exception:  # noqa: BLE001
         logger.exception("Failed to decode Telegram update")
         return JsonResponse({"ok": True})
 
     try:
-        message = _extract_message(update)
-        if not message:
-            return JsonResponse({"ok": True})
+        # Ленивая загрузка, чтобы не создать циклический импорт:
+        # integrations/tasks.py импортирует handle_telegram_update из этого модуля.
+        from .tasks import process_telegram_update  # pylint: disable=import-outside-toplevel
 
-        chat = message.get("chat", {}) or {}
-        chat_id = chat.get("id")
-        if chat_id is None:
-            return JsonResponse({"ok": True})
-
-        text = (message.get("text") or "").strip()
-        from_user = message.get("from", {}) or {}
-        tg_user_id = from_user.get("id")
-
-        if text.startswith("/start"):
-            _handle_start_command(chat_id, text, from_user)
-            return JsonResponse({"ok": True})
-
-        if text == "/help":
-            _handle_help_command(chat_id)
-            return JsonResponse({"ok": True})
-
-        _handle_task_chat_message(message, chat_id, tg_user_id)
-        return JsonResponse({"ok": True})
-
+        process_telegram_update.delay(update)
     except Exception:  # noqa: BLE001
-        logger.exception("Error while handling Telegram webhook")
-        return JsonResponse({"ok": True})
+        # Даже если очередь недоступна — не валим webhook ошибкой (иначе Telegram начнёт ретраить/логировать ошибки).
+        logger.exception("Failed to enqueue Telegram update to Celery")
+
+    return JsonResponse({"ok": True})

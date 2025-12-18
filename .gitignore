@@ -29,5 +29,8 @@ dist-ssr/
 *.sw?
 .env.prod
 .env.*
+.env
+taskpulse-frontend/.env
+taskpulse-frontend/.env.*
 __pycache__/
 *.py[cod].coverage
