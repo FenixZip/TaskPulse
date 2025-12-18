@@ -12,7 +12,7 @@ export const updateTaskStatus = async (params: {
   status: TaskStatus;
 }): Promise<Task> => {
   const { taskId, status } = params;
-  const { data } = await apiClient.patch<Task>(`/api/tasks/${taskId}/`, {
+  const { data } = await apiClient.patch<Task>(`/tasks/${taskId}/`, {
     status,
   });
   return data;

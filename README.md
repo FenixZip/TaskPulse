@@ -16,7 +16,10 @@ docker compose build web
 docker compose up -d
 
 npm run build
+sudo rm -rf /opt/taskpulse/TaskPulse/taskpulse-frontend/*
 cp -r ~/opt/taskpulse/TaskPulse/taskpulse-frontend/dist/* /var/www/taskpulse_frontend/
+sudo nginx -t && sudo systemctl reload nginx
+
 
 nginx -t
 systemctl reload nginx
