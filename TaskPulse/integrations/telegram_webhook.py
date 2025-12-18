@@ -35,8 +35,7 @@ def _extract_message(update: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 def _extract_task_id_from_text(text: str) -> Optional[int]:
     """Пытаемся вытащить ID задачи из ссылки .../tasks/<id>."""
-
-    match = TASK_LINK_RE.search(text)
+    match = TASK_LINK_RE.search(text or "")
     if not match:
         return None
     try:
@@ -45,16 +44,11 @@ def _extract_task_id_from_text(text: str) -> Optional[int]:
         return None
 
 
-def _handle_start_command(
-        chat_id: int,
-        text: str,
-        from_user: Dict[str, Any],
-) -> None:
+def _handle_start_command(chat_id: int, text: str, from_user: Dict[str, Any]) -> None:
     """
     Обработка /start и /start <token>.
     """
-
-    parts = text.split(maxsplit=1)
+    parts = (text or "").split(maxsplit=1)
 
     if len(parts) == 1:
         send_telegram_message(
@@ -65,26 +59,21 @@ def _handle_start_command(
         )
         return
 
-    # /start <token>
-    start_token = parts[1]
+    start_token = parts[1].strip()
+    if not start_token:
+        send_telegram_message(chat_id, "Токен привязки пустой. Сгенерируйте новую ссылку в профиле.")
+        return
 
     try:
-        link = (
-            TelegramLinkToken.objects
-            .select_related("user")
-            .get(token=start_token)
-        )
+        link = TelegramLinkToken.objects.select_related("user").get(token=start_token)
     except TelegramLinkToken.DoesNotExist:
-        send_telegram_message(
-            chat_id,
-            "Ссылка для привязки недействительна или уже была использована.",
-        )
+        send_telegram_message(chat_id, "Ссылка для привязки недействительна или уже была использована.")
         return
 
     user = link.user
     tg_user_id = from_user.get("id")
 
-    profile, created = TelegramProfile.objects.update_or_create(
+    profile, _ = TelegramProfile.objects.update_or_create(
         user=user,
         defaults={
             "telegram_user_id": tg_user_id,
@@ -114,16 +103,11 @@ def _handle_help_command(chat_id: int) -> None:
     )
 
 
-def _handle_task_chat_message(
-        message: Dict[str, Any],
-        chat_id: int,
-        tg_user_id: Optional[int],
-) -> None:
+def _handle_task_chat_message(message: Dict[str, Any], chat_id: int, tg_user_id: Optional[int]) -> None:
     """
     Обычное сообщение (НЕ команда).
     Если это reply на уведомление по задаче — создаём TaskMessage в БД.
     """
-
     if tg_user_id is None:
         return
 
@@ -152,9 +136,7 @@ def _handle_task_chat_message(
         return
 
     try:
-        profile = TelegramProfile.objects.select_related("user").get(
-            telegram_user_id=tg_user_id
-        )
+        profile = TelegramProfile.objects.select_related("user").get(telegram_user_id=tg_user_id)
     except TelegramProfile.DoesNotExist:
         send_telegram_message(
             chat_id,
@@ -166,10 +148,7 @@ def _handle_task_chat_message(
     try:
         task = Task.objects.get(pk=task_id)
     except Task.DoesNotExist:
-        send_telegram_message(
-            chat_id,
-            "Задача, к которой относится это сообщение, не найдена.",
-        )
+        send_telegram_message(chat_id, "Задача, к которой относится это сообщение, не найдена.")
         return
 
     TaskMessage.objects.create(
@@ -178,15 +157,44 @@ def _handle_task_chat_message(
         text=text,
     )
 
-    send_telegram_message(
-        chat_id,
-        "Ваше сообщение отправлено в чат задачи на сайте.",
-    )
+    send_telegram_message(chat_id, "Ваше сообщение отправлено в чат задачи на сайте.")
+
+
+def handle_telegram_update(update: Dict[str, Any]) -> None:
+    """
+    ВАЖНО: эту функцию вызывает Celery (integrations/tasks.py).
+    Здесь вся "тяжёлая" обработка update.
+    """
+    message = _extract_message(update)
+    if not message:
+        return
+
+    chat = message.get("chat") or {}
+    chat_id = chat.get("id")
+    if not chat_id:
+        return
+
+    from_user = message.get("from") or {}
+    tg_user_id = from_user.get("id")
+
+    text = (message.get("text") or "").strip()
+    if not text:
+        return
+
+    if text.startswith("/start"):
+        _handle_start_command(chat_id, text, from_user)
+        return
+
+    if text == "/help":
+        _handle_help_command(chat_id)
+        return
+
+    _handle_task_chat_message(message, chat_id, tg_user_id)
 
 
 @csrf_exempt
 def telegram_webhook(request: HttpRequest, secret: str) -> JsonResponse:
-    """Обработчик вебхука Telegram."""
+    """Обработчик вебхука Telegram: быстро принять update и отправить в Celery."""
 
     expected_secret = _get_setting("TELEGRAM_WEBHOOK_SECRET")
     if expected_secret and secret != expected_secret:
@@ -197,20 +205,17 @@ def telegram_webhook(request: HttpRequest, secret: str) -> JsonResponse:
         return JsonResponse({"ok": True})
 
     try:
-        body_raw = request.body.decode("utf-8")
-        update: Dict[str, Any] = json.loads(body_raw)
+        update: Dict[str, Any] = json.loads(request.body.decode("utf-8"))
     except Exception:  # noqa: BLE001
         logger.exception("Failed to decode Telegram update")
         return JsonResponse({"ok": True})
 
     try:
-        # Ленивая загрузка, чтобы не создать циклический импорт:
-        # integrations/tasks.py импортирует handle_telegram_update из этого модуля.
+        # Важно: импорт здесь, чтобы не было циклических импортов.
         from .tasks import process_telegram_update  # pylint: disable=import-outside-toplevel
 
         process_telegram_update.delay(update)
     except Exception:  # noqa: BLE001
-        # Даже если очередь недоступна — не валим webhook ошибкой (иначе Telegram начнёт ретраить/логировать ошибки).
         logger.exception("Failed to enqueue Telegram update to Celery")
 
     return JsonResponse({"ok": True})
