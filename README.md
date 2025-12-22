@@ -1,74 +1,136 @@
-src/.env
-python manage.py runserver 0.0.0.0:8000
+# Pulse-zone.tech
 
+Pulse-zone.tech — веб-сервис для управления задачами и командной работой.  
+Проект делается как основа под SaaS (не демо и не “учебка”).
 
-npx localtunnel --port 8000 --subdomain two-mangos-sit
+**Продакшн:** https://pulse-zone.tech
 
-curl -s "https://api.telegram.org/bot8219195501:AAH9WLtZiEp5Reez1FUoXN2fv6UvKQGFi2k/getWebhookInfo"
-curl -i http://localhost:8000/api/integrations/telegram/webhook/long-random-secret/
-curl -X POST "https://api.telegram.org/bot8219195501:AAH9WLtZiEp5Reez1FUoXN2fv6UvKQGFi2k/setWebhook" \
-  -d "url=https://pulse-zone.tech/api/integrations/telegram/webhook/long-random-secret/"
+---
 
+## Что здесь есть
 
+- Задачи и жизненный цикл (создание/назначение/статусы)
+- Роли и доступы (создатель / исполнитель / админ)
+- Приглашения пользователей
+- Уведомления и напоминания
+- Интеграция с Telegram (привязка через одноразовый токен)
+- Отчёты и базовая статистика
+- Фоновые задачи через очередь
 
-python manage.py shell
-docker compose build web
-docker compose up -d
+---
 
-npm run build
-sudo rm -rf /opt/taskpulse/TaskPulse/taskpulse-frontend/*
-cp -r ~/opt/taskpulse/TaskPulse/taskpulse-frontend/dist/* /var/www/taskpulse_frontend/
-sudo nginx -t && sudo systemctl reload nginx
+## Стек
 
+**Backend**
+- Python 3.13.7
+- Django 6.0 + Django REST Framework 3.16.1
+- PostgreSQL 1.3.0
+- Celery 5.6.0 + Redis 7.1.0
+- JWT-аутентификация
 
-nginx -t
-systemctl reload nginx
+**Frontend**
+- React
+- TypeScript
+- Feature-Sliced Design (FSD)
 
-docker logs -f taskpulse-web
-docker exec -it taskpulse-web python manage.py flush --no-input
-docker exec -it taskpulse-web python manage.py migrate
+**Интеграции**
+- Telegram Bot (deep-link + one-time token)
 
+---
 
+## Как устроен проект
 
-curl "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo"
-curl "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
-  -d "url=https://pulse-zone.tech/api/integrations/telegram/webhook/${TELEGRAM_WEBHOOK_SECRET}/"
-docker exec -it taskpulse-web env | grep TELEGRAM_WEBHOOK_SECRET
-curl "https://api.telegram.org/bot8219195501:AAH9WLtZiEp5Reez1FUoXN2fv6UvKQGFi2k/getWebhookInfo"
-curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
-  -d "url=https://pulse-zone.tech/api/integrations/telegram/webhook/$TELEGRAM_WEBHOOK_SECRET/"
+### Backend (Django)
 
+Код разделён на доменные приложения:
 
+- `accounts` — пользователи, роли, авторизация, приглашения
+- `tasks` — задачи, напоминания, отчёты
+- `integrations` — Telegram и внешние сервисы
 
-python manage.py flush
-curl "http://localhost:8000/api/auth/verify-email/?token=59cc1e1e-f736-4ad0-953a-3e17f6df3f40"
-curl "http://localhost:5173/invite/accept?token=9a4a9efa-1d12-4064-8b2f-e5c1f3b81922"
-from tasks.tasks_reminders import send_task_assigned_notification
+Асинхронные операции (уведомления/напоминания) выполняются через Celery.
 
-send_task_assigned_notification.delay(999999)
+### Frontend (React)
 
+Фронтенд построен по Feature-Sliced Design:
 
-python manage.py runserver 0.0.0.0:8000
-celery -A TaskPulse worker -l info -P solo
-celery -A TaskPulse beat -l info
-e
+- `entities` — доменные сущности
+- `features` — пользовательские сценарии
+- `pages` — страницы
+- `app` — роутинг, guards, провайдеры
+- `shared` — UI и утилиты
 
-from integrations.notifications import send_telegram_message
-send_telegram_message(493089867, "Тестовое сообщение от Pulse-zone")
+Есть guards для:
+- авторизации
+- ролей
+- обязательной привязки Telegram
 
+---
 
-docker stop amnezia-xray amnezia-awg
-mkdir -p /var/www/taskpulse_frontend
-cp -r ~/opt/taskpulse/TaskPulse/taskpulse-frontend/dist/* /var/www/taskpulse_frontend/
+## Telegram
 
+Привязка Telegram сделана через deep-link:
 
-echo ".env.prod" >> .gitignore
-git rm -r --cached .
-git commit -m "Remove .env.prod from repo and ignore it"
-git push
+- пользователь получает уникальную ссылку вида `t.me/<bot>?start=<uuid>`
+- токен одноразовый
+- user_id напрямую не передаётся
 
+---
 
-grep -R "api/auth" -n src
+## Локальный запуск
 
+### Backend
 
+~~~bash
+python -m venv venv
+source venv/bin/activate
 
+pip install -r requirements.txt
+
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+~~~
+
+### Frontend
+
+~~~bash
+cd Pulse-zone.tech-frontend
+npm install
+npm run dev
+~~~
+
+---
+
+## Переменные окружения
+
+Нужны как минимум:
+- настройки базы данных
+- JWT-ключи/секреты
+- Redis/Celery
+- Telegram bot token
+
+Смотри примеры в `.env`.
+
+---
+
+## Тесты
+
+Подход: unit / integration / e2e (сквозные сценарии).
+
+- Backend: `pytest`
+- Frontend: стандартные инструменты React-экосистемы (юнит/интеграционные) + e2e отдельно
+
+---
+
+## Статус
+
+Проект в активной разработке. Архитектура рассчитана на расширение функционала и рост нагрузки.
+
+---
+
+## Автор
+
+Олег Сорокин
+
+Telegram - @OlegSorokinMsk
